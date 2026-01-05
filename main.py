@@ -60,7 +60,7 @@ Please check the problem immediately.
 
 
 # ----------------------------------------------------------
-# AI SYSTEM PROMPT
+# AI SYSTEM PROMPT (for troubleshooting)
 # ----------------------------------------------------------
 SYSTEM_PROMPT = """You are an IT Helpdesk Support Assistant for an online learning platform. Give SHORT, CONCISE responses - maximum 2-3 sentences.
 
@@ -82,14 +82,45 @@ End with: "Still stuck? Share a screenshot." (only if needed)"""
 
 
 # ----------------------------------------------------------
+# HUMAN-LIKE CHAT PROMPT (for Chat with AI Assistant)
+# ----------------------------------------------------------
+HUMAN_CHAT_PROMPT = """You are a friendly human support agent named "Support" for an online learning platform. Talk like a real person - warm, casual, and helpful.
+
+YOUR PERSONALITY:
+- Talk like a real human, not a robot
+- Use casual language: "Hey!", "Got it!", "No worries!", "Let me help you with that"
+- Show empathy: "I understand that's frustrating", "I'm sorry you're facing this"
+- Be conversational and natural
+- Use short sentences, like texting a friend
+- Add friendly emojis occasionally 😊
+
+RESPONSE STYLE:
+- 2-4 short sentences max
+- Sound like you're chatting, not reading from a script
+- Ask follow-up questions naturally
+- If you can help, help quickly
+- If you can't, be honest
+
+KNOWLEDGE:
+- Login issues, password resets
+- Assessment/test problems
+- LMS navigation
+- Certificate queries
+- General platform help
+
+Remember: You're a helpful friend, not a formal bot!"""
+
+
+# ----------------------------------------------------------
 # FREE AI MODEL FUNCTION
 # ----------------------------------------------------------
-def ask_ai_free(prompt):
+def ask_ai_free(prompt, human_mode=False):
     try:
+        system = HUMAN_CHAT_PROMPT if human_mode else SYSTEM_PROMPT
         response = groq_client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -118,7 +149,7 @@ def send_support_menu(chat_id):
     btn4 = types.InlineKeyboardButton(" LMS", callback_data="lms")
     btn5 = types.InlineKeyboardButton(" Navigation Help", callback_data="navhelp")
     btn6 = types.InlineKeyboardButton(" Other Issue", callback_data="other")
-    btn7 = types.InlineKeyboardButton("💬 Chat with AI Assistant", callback_data="ai_chat")
+    btn7 = types.InlineKeyboardButton("💬 Chat with Us", callback_data="ai_chat")
 
     markup.add(btn1, btn2, btn3, btn4, btn5, btn6)
     markup.add(btn7)
@@ -144,7 +175,7 @@ def help_handler(message):
             btn4 = types.InlineKeyboardButton(" LMS", callback_data="lms")
             btn5 = types.InlineKeyboardButton(" Navigation Help", callback_data="navhelp")
             btn6 = types.InlineKeyboardButton(" Other Issue", callback_data="other")
-            btn7 = types.InlineKeyboardButton("💬 Chat with AI Assistant", callback_data="ai_chat")
+            btn7 = types.InlineKeyboardButton("💬 Chat with Us", callback_data="ai_chat")
             markup.add(btn1, btn2, btn3, btn4, btn5, btn6)
             markup.add(btn7)
             
@@ -351,7 +382,7 @@ def ai_chat_handler(message):
     user_msg = message.text
 
     bot.send_chat_action(cid, "typing")
-    ai_response = ask_ai_free(user_msg)
+    ai_response = ask_ai_free(user_msg, human_mode=True)
 
     bot.send_message(cid, ai_response)
 
