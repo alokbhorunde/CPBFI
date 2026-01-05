@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from groq import Groq
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -62,23 +63,77 @@ Please check the problem immediately.
 # ----------------------------------------------------------
 # AI SYSTEM PROMPT (for troubleshooting)
 # ----------------------------------------------------------
-SYSTEM_PROMPT = """You are an IT Helpdesk Support Assistant for an online learning platform. Give SHORT, CONCISE responses - maximum 2-3 sentences.
+SYSTEM_PROMPT = """You are an IT Helpdesk Support Assistant for the CPBFI online learning platform.
 
-RESPONSE RULES:
-- Keep responses brief and to the point (2-3 sentences max)
-- Give ONE clear solution at a time
-- No long explanations or multiple steps
-- Be friendly but direct
-- If unclear, ask ONE clarifying question
+GOAL:
+Provide calm, reassuring, and SHORT responses that resolve student issues quickly.
 
-COMMON ISSUES:
-- Login: Check internet, try incognito, reset password
-- Assessment: Refresh page, check time window
-- LMS/Videos: Clear cache, try different browser
-- Certificates: Complete course first, wait 24-48 hours
-- Profile: Check file size (<2MB), use Chrome
+RESPONSE RULES (STRICT):
 
-End with: "Still stuck? Share a screenshot." (only if needed)"""
+- Maximum 2–3 sentences only
+- ONE clear solution at a time
+- No step-by-step lists
+- No technical jargon
+- Acknowledge the issue briefly
+- If required, escalate politely
+- Ask ONLY ONE clarifying question if needed
+- End with: "Still stuck? Share a screenshot." (only when the issue may persist)
+
+TONE:
+
+- Polite, supportive, and professional
+- Reduce anxiety, build confidence
+- Never blame the user
+
+SUPPORTED ISSUE CATEGORIES & STANDARD ACTIONS:
+
+LOGIN (L1):
+
+- Use shared credentials
+- Use “Forgot Password” with registered email
+- Recheck email, mobile number, and password carefully
+
+TECHNICAL (L1):
+
+- Refresh the page once
+- Open the platform in Google Chrome
+- Ensure stable internet connection
+
+ASSESSMENT (L1):
+
+- Refresh the test page (answers stay safe)
+- Open the test in Chrome on a stable network
+- If submission fails, escalate to IT team
+
+PROFILE / REGISTRATION (L1):
+
+- Ensure document format and size are correct
+- If form issue persists, inform it’s under review
+
+COURSE ACCESS & CONTENT (L2):
+
+- Check Dashboard → Recorded Videos
+- Refresh or reopen in Chrome
+
+NAVIGATION (L3):
+
+- Guide to Dashboard → Course Section
+
+CERTIFICATES (L2):
+
+- Certificates are generated as per announced schedule
+- Ask user to wait for notification if timeline not passed
+
+MISCELLANEOUS (L3):
+
+- Attendance issues → contact student coordinator
+- Out-of-scope → ask for a clear platform-related issue
+
+DO NOT:
+
+- Give multiple fixes together
+- Over-explain
+- Mention internal priorities (L1/L2/L3) to users"""
 
 
 # ----------------------------------------------------------
@@ -135,6 +190,7 @@ def ask_ai_free(prompt, human_mode=False):
 # ----------------------------------------------------------
 user_ai_mode = {}        # For "Other Issue"
 user_ai_chat_mode = {}   # For "Chat with AI Assistant"
+user_pcq_timing = {}     # For PCQ 30-min timing issue
 
 
 # ----------------------------------------------------------
@@ -181,8 +237,9 @@ def help_handler(message):
             
             bot.send_message(
                 user_id,
-                "👋 Hi! I'm here to help you.\nChoose a category below:",
-                reply_markup=markup
+                "👋 **CPBFI Helpdesk**\nChoose a category below:",
+                reply_markup=markup,
+                parse_mode="Markdown"
             )
             # Create button to go to bot DM
             dm_markup = types.InlineKeyboardMarkup()
@@ -388,17 +445,121 @@ def ai_chat_handler(message):
 
 
 # ----------------------------------------------------------
+# MESSAGE HANDLER FOR: PCQ TIMING ISSUE
+# ----------------------------------------------------------
+@bot.message_handler(func=lambda msg: user_pcq_timing.get(msg.chat.id) is True)
+def pcq_timing_handler(message):
+    cid = message.chat.id
+    user_input = message.text.strip()
+    
+    bot.send_chat_action(cid, "typing")
+    
+    # Try to parse the time
+    try:
+        # Try different formats
+        scheduled_time = None
+        for fmt in ["%H:%M", "%I:%M %p", "%I:%M%p", "%H.%M", "%I.%M %p"]:
+            try:
+                scheduled_time = datetime.strptime(user_input.upper(), fmt)
+                break
+            except:
+                continue
+        
+        if not scheduled_time:
+            bot.send_message(cid, "❌ Sorry, I couldn't understand that time format.\n\nPlease enter your scheduled time like:\n• 10:30\n• 2:00 PM\n• 14:30")
+            return
+        
+        # Get current time (IST)
+        now = datetime.now()
+        scheduled_today = now.replace(hour=scheduled_time.hour, minute=scheduled_time.minute, second=0)
+        
+        # Quiz is accessible ONLY within 30 min of scheduled time
+        # After scheduled + 30 min = quiz becomes INACCESSIBLE
+        cutoff_time = scheduled_today + timedelta(minutes=30)
+        
+        if now < scheduled_today:
+            # Before scheduled time
+            wait_mins = (scheduled_today - now).total_seconds() / 60
+            bot.send_message(cid, 
+                f"⏳ Your quiz hasn't started yet!\n\n"
+                f"📅 Scheduled time: {scheduled_today.strftime('%I:%M %p')}\n"
+                f"⏰ Current time: {now.strftime('%I:%M %p')}\n\n"
+                f"⏱️ Wait {int(wait_mins)} more minutes until your scheduled time.")
+        elif now <= cutoff_time:
+            # Within the 30-min window - should be accessible
+            mins_left = (cutoff_time - now).total_seconds() / 60
+            bot.send_message(cid, 
+                f"✅ You should be able to access the quiz now!\n\n"
+                f"📅 Scheduled time: {scheduled_today.strftime('%I:%M %p')}\n"
+                f"🚫 Cutoff time: {cutoff_time.strftime('%I:%M %p')}\n"
+                f"⏰ Current time: {now.strftime('%I:%M %p')}\n\n"
+                f"You have {int(mins_left)} minutes left to start.\n\n"
+                f"Try refreshing the page. If still not working, clear cache and try in incognito mode.")
+        else:
+            # After 30 min - too late
+            mins_late = (now - cutoff_time).total_seconds() / 60
+            bot.send_message(cid, 
+                f"❌ Your quiz window has expired.\n\n"
+                f"📅 Scheduled time: {scheduled_today.strftime('%I:%M %p')}\n"
+                f"🚫 Cutoff was: {cutoff_time.strftime('%I:%M %p')}\n"
+                f"⏰ Current time: {now.strftime('%I:%M %p')}\n\n"
+                f"You're {int(mins_late)} minutes late. The quiz is no longer accessible.")
+        
+        user_pcq_timing[cid] = False
+        
+    except Exception as e:
+        bot.send_message(cid, "❌ Couldn't process that. Please enter time like: 10:30 or 2:00 PM")
+        print(f"PCQ timing error: {e}")
+
+
+# ----------------------------------------------------------
 # CATCH-ALL HANDLER FOR: User describes issue (DM only)
 # ----------------------------------------------------------
 @bot.message_handler(func=lambda msg: msg.chat.type == "private")
 def general_message_handler(message):
     cid = message.chat.id
-    user_msg = message.text
-
-    # Respond with AI for any message in DM
+    user_msg = message.text.lower() if message.text else ""
+    
     bot.send_chat_action(cid, "typing")
-    ai_response = ask_ai_free(user_msg)
+    
+    # Check for PCQ 30-min timing issue
+    if any(keyword in user_msg for keyword in ["30 min", "30min", "revised time", "can't start quiz", "cant start quiz", "quiz not accessible", "30 minute"]):
+        user_pcq_timing[cid] = True
+        bot.send_message(cid, 
+            "🕐 I see you're facing the **30-minute timing issue** with PCQ.\n\n"
+            "Let me help you check if you can access the quiz now.\n\n"
+            "📝 **What was your scheduled quiz time?**\n"
+            "(Example: 10:30 or 2:00 PM)",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Respond with AI for any other message
+    ai_response = ask_ai_free(message.text)
     bot.send_message(cid, ai_response)
+
+
+# ----------------------------------------------------------
+# PHOTO HANDLER: Respond to screenshots
+# ----------------------------------------------------------
+@bot.message_handler(content_types=['photo'])
+def photo_handler(message):
+    cid = message.chat.id
+    caption = message.caption if message.caption else ""
+    
+    bot.send_chat_action(cid, "typing")
+    
+    # Acknowledge the screenshot and provide help
+    response = f"📸 Thanks for sharing the screenshot! I can see you're facing an issue.\n\n"
+    
+    if "pcq" in caption.lower() or "quiz" in caption.lower():
+        response += "This looks like a PCQ/Quiz access issue. The error usually means:\n• You're outside the allowed time window\n• Wait 30 minutes after the revised time and try again\n\nStill stuck? Describe the exact issue and I'll help!"
+    elif "login" in caption.lower() or "password" in caption.lower():
+        response += "I see this is a login issue. Try:\n• Clear browser cache\n• Use incognito mode\n• Reset password if needed\n\nStill stuck? Let me know more details!"
+    else:
+        response += "Please describe what issue you're facing in this screenshot, and I'll help you fix it! 😊"
+    
+    bot.send_message(cid, response)
 
 
 # ----------------------------------------------------------
