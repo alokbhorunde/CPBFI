@@ -10,9 +10,24 @@ def register(bot):
         cid = message.chat.id
         user_msg = message.text.lower() if message.text else ""
         
+        # Check if user is collecting details for LOGIN escalation
+        if login.is_in_detail_collection_mode(cid):
+            login.handle_detail_collection(bot, message)
+            return
+        
+        # Check if user is collecting details for PCQ escalation
+        if pcq.is_in_pcq_detail_collection_mode(cid):
+            pcq.handle_pcq_detail_collection(bot, message)
+            return
+        
         # Check if user is in "Other Login Issue" mode
         if login.is_in_login_other_mode(cid):
             login.handle_login_other_message(bot, message)
+            return
+        
+        # Check if user is in "Other PCQ Issue" mode
+        if pcq.is_in_pcq_other_mode(cid):
+            pcq.handle_pcq_other_message(bot, message)
             return
         
         # Check if user is in PCQ timing mode

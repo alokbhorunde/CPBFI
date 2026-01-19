@@ -1,9 +1,16 @@
 from telebot import types
 from handlers.menu import send_support_menu
 from utils.ai import ask_ai_free
+from utils.email import send_email_to_it
 
 # State for "Other Login Issue" - free text input
 user_login_other_mode = {}
+
+# Track escalation attempts per user
+user_escalation_attempts = {}
+
+# Track user details collection state: {cid: {"step": "name/email/bfsi", "name": "", "email": "", "bfsi": "", "issue": "", "portal": ""}}
+user_detail_collection = {}
 
 
 def register(bot):
@@ -18,6 +25,9 @@ def register(bot):
         # STEP 1: Portal Selection (Entry Point)
         # --------------------------------------------------
         if data == "login":
+            # Reset escalation attempts when user starts fresh
+            user_escalation_attempts[cid] = user_escalation_attempts.get(cid, {"count": 0, "portal": "", "issue": ""})
+            
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("🟦 Skillserv Portal", callback_data="login_portal_skillserv"),
@@ -37,6 +47,12 @@ def register(bot):
         # --------------------------------------------------
         elif data in ["login_portal_skillserv", "login_portal_knowlens"]:
             portal = "Skillserv" if "skillserv" in data else "Knowlens"
+            
+            # Track portal
+            if cid not in user_escalation_attempts:
+                user_escalation_attempts[cid] = {"count": 0, "portal": portal, "issue": ""}
+            else:
+                user_escalation_attempts[cid]["portal"] = portal
             
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
@@ -59,12 +75,13 @@ def register(bot):
         # --------------------------------------------------
         elif data.startswith("login_creds_"):
             portal = data.split("_")[-1].capitalize()
+            track_issue(cid, portal, "Invalid/Wrong Credentials")
             
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("🔁 Try Again", callback_data=f"login_portal_{portal.lower()}"),
                 types.InlineKeyboardButton("📩 Forgot Password", callback_data=f"login_forgot_{portal.lower()}"),
-                types.InlineKeyboardButton("❓ Still Not Working (Talk to Support)", callback_data="login_escalate"),
+                types.InlineKeyboardButton("❓ Still Not Working", callback_data=f"login_still_not_working_{portal.lower()}"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}")
             )
 
@@ -84,14 +101,15 @@ def register(bot):
         # --------------------------------------------------
         # FLOW B: OTP Not Received
         # --------------------------------------------------
-        elif data.startswith("login_otp_") and not data.startswith("login_otp_still_") and not data.startswith("login_otp_resend_") and not data.startswith("login_otp_confirm_"):
+        elif data.startswith("login_otp_") and not data.startswith("login_otp_still_") and not data.startswith("login_otp_resend_") and not data.startswith("login_otp_confirm_") and not data.startswith("login_otp_device_"):
             portal = data.split("_")[-1].capitalize()
+            track_issue(cid, portal, "OTP Not Received")
             
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("📤 Resend OTP (After Waiting)", callback_data=f"login_otp_resend_{portal.lower()}"),
                 types.InlineKeyboardButton("🔄 Try Another Device / Browser", callback_data=f"login_otp_device_{portal.lower()}"),
-                types.InlineKeyboardButton("❓ Still Not Received", callback_data=f"login_otp_still_{portal.lower()}"),
+                types.InlineKeyboardButton("❓ Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}")
             )
 
@@ -113,7 +131,7 @@ def register(bot):
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("✅ Done, Trying Again", callback_data=f"login_portal_{portal.lower()}"),
-                types.InlineKeyboardButton("❓ Still Not Received", callback_data=f"login_otp_still_{portal.lower()}"),
+                types.InlineKeyboardButton("❓ Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_otp_{portal.lower()}")
             )
 
@@ -134,7 +152,7 @@ def register(bot):
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("✅ Worked!", callback_data="login_fixed"),
-                types.InlineKeyboardButton("❓ Still Not Received", callback_data=f"login_otp_still_{portal.lower()}"),
+                types.InlineKeyboardButton("❓ Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_otp_{portal.lower()}")
             )
 
@@ -148,48 +166,55 @@ def register(bot):
                 reply_markup=markup
             )
 
-        # OTP - Still not received (confirmation before escalation)
-        elif data.startswith("login_otp_still_"):
+        # --------------------------------------------------
+        # STILL NOT WORKING - Track attempts (2-3 times)
+        # --------------------------------------------------
+        elif data.startswith("login_still_not_working_"):
             portal = data.split("_")[-1].capitalize()
             
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Yes, Confirm & Escalate", callback_data="login_otp_confirm_escalate"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_otp_{portal.lower()}")
-            )
+            # Increment attempt counter
+            if cid not in user_escalation_attempts:
+                user_escalation_attempts[cid] = {"count": 1, "portal": portal, "issue": "Login Issue"}
+            else:
+                user_escalation_attempts[cid]["count"] += 1
+            
+            attempts = user_escalation_attempts[cid]["count"]
+            
+            if attempts >= 2:
+                # After 2+ attempts, start collecting user details
+                start_detail_collection(bot, cid, portal, user_escalation_attempts[cid].get("issue", "Login Issue"))
+            else:
+                # First attempt - give another chance
+                markup = types.InlineKeyboardMarkup(row_width=1)
+                markup.add(
+                    types.InlineKeyboardButton("🔁 Try Again", callback_data=f"login_portal_{portal.lower()}"),
+                    types.InlineKeyboardButton("❓ Still Not Working", callback_data=f"login_still_not_working_{portal.lower()}"),
+                    types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}")
+                )
 
-            bot.send_message(cid,
-                "⚠️ **Before Escalating**\n\n"
-                "Please confirm:\n\n"
-                "✔ You entered the registered email ID\n"
-                "✔ You waited at least 2–3 minutes\n"
-                "✔ You did not request OTP multiple times",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        # OTP - Confirm escalation
-        elif data == "login_otp_confirm_escalate":
-            bot.send_message(cid,
-                "📞 **Escalated to Support**\n\n"
-                "Your OTP issue has been noted.\n"
-                "Our support team will look into this.\n\n"
-                "📧 If urgent, please email: support@cpbfi.org\n\n"
-                "Thank you for your patience! 🙏"
-            )
-            send_support_menu(bot, cid)
+                bot.send_message(cid,
+                    "⚠️ **Let's try once more**\n\n"
+                    "Please try the following:\n"
+                    "1️⃣ Clear your browser cache\n"
+                    "2️⃣ Try in Incognito/Private mode\n"
+                    "3️⃣ Use a different browser or device\n\n"
+                    f"_Attempt {attempts}/2 - After 2 attempts, we'll connect you with support._",
+                    parse_mode="Markdown",
+                    reply_markup=markup
+                )
 
         # --------------------------------------------------
         # FLOW C: Forgot Password Issue
         # --------------------------------------------------
         elif data.startswith("login_forgot_") and not data.startswith("login_forgot_retry_") and not data.startswith("login_forgot_otp_"):
             portal = data.split("_")[-1].capitalize()
+            track_issue(cid, portal, "Forgot Password")
             
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("🔄 Try Again", callback_data=f"login_forgot_retry_{portal.lower()}"),
                 types.InlineKeyboardButton("📩 OTP / Reset Link Not Received", callback_data=f"login_forgot_otp_{portal.lower()}"),
-                types.InlineKeyboardButton("❓ Still Facing Issue", callback_data="login_escalate"),
+                types.InlineKeyboardButton("❓ Still Facing Issue", callback_data=f"login_still_not_working_{portal.lower()}"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}")
             )
 
@@ -212,7 +237,7 @@ def register(bot):
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("✅ Worked!", callback_data="login_fixed"),
-                types.InlineKeyboardButton("❓ Still Facing Issue", callback_data=f"login_forgot_{portal.lower()}"),
+                types.InlineKeyboardButton("❓ Still Facing Issue", callback_data=f"login_still_not_working_{portal.lower()}"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_forgot_{portal.lower()}")
             )
 
@@ -231,11 +256,10 @@ def register(bot):
         elif data.startswith("login_forgot_otp_"):
             portal = data.split("_")[-1].capitalize()
             
-            # Redirect to OTP flow
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
                 types.InlineKeyboardButton("📤 Resend Reset Link", callback_data=f"login_forgot_retry_{portal.lower()}"),
-                types.InlineKeyboardButton("❓ Still Not Received (Escalate)", callback_data="login_escalate"),
+                types.InlineKeyboardButton("❓ Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_forgot_{portal.lower()}")
             )
 
@@ -256,6 +280,7 @@ def register(bot):
         elif data.startswith("login_other_"):
             portal = data.split("_")[-1].capitalize()
             user_login_other_mode[cid] = portal
+            track_issue(cid, portal, "Other Login Issue")
             
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}"))
@@ -270,22 +295,13 @@ def register(bot):
             )
 
         # --------------------------------------------------
-        # Escalate to Support
-        # --------------------------------------------------
-        elif data == "login_escalate":
-            bot.send_message(cid,
-                "📞 **Escalated to Support**\n\n"
-                "Your login issue has been noted.\n"
-                "Our support team will assist you.\n\n"
-                "📧 If urgent, please email: support@cpbfi.org\n\n"
-                "Thank you for your patience! 🙏"
-            )
-            send_support_menu(bot, cid)
-
-        # --------------------------------------------------
         # Fixed / Success
         # --------------------------------------------------
         elif data == "login_fixed":
+            # Reset attempts on success
+            if cid in user_escalation_attempts:
+                user_escalation_attempts[cid] = {"count": 0, "portal": "", "issue": ""}
+            
             bot.send_message(cid, "🎉 Great! Your login issue is resolved.\n\nHappy learning! 📚")
             send_support_menu(bot, cid)
 
@@ -294,6 +310,148 @@ def register(bot):
         # --------------------------------------------------
         elif data == "login_back_menu":
             send_support_menu(bot, cid)
+
+
+def track_issue(cid, portal, issue):
+    """Track the current issue type for a user."""
+    if cid not in user_escalation_attempts:
+        user_escalation_attempts[cid] = {"count": 0, "portal": portal, "issue": issue}
+    else:
+        user_escalation_attempts[cid]["portal"] = portal
+        user_escalation_attempts[cid]["issue"] = issue
+
+
+def start_detail_collection(bot, cid, portal, issue):
+    """Start collecting user details for escalation."""
+    user_detail_collection[cid] = {
+        "step": "name",
+        "name": "",
+        "email": "",
+        "bfsi": "",
+        "issue": issue,
+        "portal": portal
+    }
+    
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="login"))
+    
+    bot.send_message(cid,
+        "📝 **Escalating to Support Team**\n\n"
+        "We need a few details to help you faster.\n\n"
+        "**Step 1/3:** Please enter your **Full Name**:",
+        parse_mode="Markdown",
+        reply_markup=markup
+    )
+
+
+def is_in_detail_collection_mode(chat_id):
+    """Check if user is in detail collection mode."""
+    return chat_id in user_detail_collection and user_detail_collection[chat_id].get("step") is not None
+
+
+def handle_detail_collection(bot, message):
+    """Handle user input during detail collection."""
+    cid = message.chat.id
+    user_input = message.text.strip()
+    
+    if cid not in user_detail_collection:
+        return False
+    
+    current_step = user_detail_collection[cid]["step"]
+    
+    if current_step == "name":
+        user_detail_collection[cid]["name"] = user_input
+        user_detail_collection[cid]["step"] = "email"
+        
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="login"))
+        
+        bot.send_message(cid,
+            f"✅ Name: **{user_input}**\n\n"
+            "**Step 2/3:** Please enter your **Email ID**:",
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+    
+    elif current_step == "email":
+        user_detail_collection[cid]["email"] = user_input
+        user_detail_collection[cid]["step"] = "bfsi"
+        
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="login"))
+        
+        bot.send_message(cid,
+            f"✅ Email: **{user_input}**\n\n"
+            "**Step 3/3:** Please enter your **BFSI ID**:",
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+    
+    elif current_step == "bfsi":
+        user_detail_collection[cid]["bfsi"] = user_input
+        user_detail_collection[cid]["step"] = None  # Done collecting
+        
+        # Collect all details
+        details = user_detail_collection[cid]
+        
+        # Send email to IT
+        send_login_escalation_email(
+            name=details["name"],
+            email=details["email"],
+            bfsi_id=details["bfsi"],
+            portal=details["portal"],
+            issue=details["issue"]
+        )
+        
+        # Confirm to user
+        bot.send_message(cid,
+            "✅ **Issue Escalated Successfully!**\n\n"
+            f"📋 **Details Submitted:**\n"
+            f"• Name: {details['name']}\n"
+            f"• Email: {details['email']}\n"
+            f"• BFSI ID: {details['bfsi']}\n"
+            f"• Portal: {details['portal']}\n"
+            f"• Issue: {details['issue']}\n\n"
+            "🔔 Our support team will contact you shortly.\n"
+            "📧 For urgent queries: support@cpbfi.org\n\n"
+            "Thank you for your patience! 🙏",
+            parse_mode="Markdown"
+        )
+        
+        # Reset states
+        if cid in user_escalation_attempts:
+            user_escalation_attempts[cid] = {"count": 0, "portal": "", "issue": ""}
+        del user_detail_collection[cid]
+        
+        send_support_menu(bot, cid)
+    
+    return True
+
+
+def send_login_escalation_email(name, email, bfsi_id, portal, issue):
+    """Send escalation email to IT team."""
+    issue_details = f"""
+LOGIN ISSUE ESCALATION (L1)
+
+Student Details:
+- Name: {name}
+- Email: {email}
+- BFSI ID: {bfsi_id}
+
+Issue Details:
+- Portal: {portal}
+- Issue Type: {issue}
+- Escalation Reason: User tried 2+ times without resolution
+
+Action Required:
+Please check and resolve this login issue.
+"""
+    
+    try:
+        send_email_to_it(f"{name} ({email})", f"LOGIN - {issue} - {portal}")
+        print(f"📧 Escalation email sent for {name} ({email})")
+    except Exception as e:
+        print(f"❌ Email error: {e}")
 
 
 def is_in_login_other_mode(chat_id):
@@ -316,7 +474,7 @@ def handle_login_other_message(bot, message):
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
         types.InlineKeyboardButton("✅ Issue Resolved", callback_data="login_fixed"),
-        types.InlineKeyboardButton("❓ Still Need Help", callback_data="login_escalate"),
+        types.InlineKeyboardButton("❓ Still Need Help", callback_data=f"login_still_not_working_{portal.lower()}"),
         types.InlineKeyboardButton("⬅️ Back to Login Menu", callback_data="login")
     )
     
