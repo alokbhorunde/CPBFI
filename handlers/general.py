@@ -1,4 +1,4 @@
-from handlers import pcq, other, ai_chat
+from handlers import pcq, other, ai_chat, login
 from utils.ai import ask_ai_free
 
 
@@ -9,6 +9,11 @@ def register(bot):
     def general_message_handler(message):
         cid = message.chat.id
         user_msg = message.text.lower() if message.text else ""
+        
+        # Check if user is in "Other Login Issue" mode
+        if login.is_in_login_other_mode(cid):
+            login.handle_login_other_message(bot, message)
+            return
         
         # Check if user is in PCQ timing mode
         if pcq.is_in_timing_mode(cid):
