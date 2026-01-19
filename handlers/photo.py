@@ -1,7 +1,7 @@
 def register(bot):
     """Register photo message handler."""
     
-    @bot.message_handler(content_types=['photo'])
+    @bot.message_handler(content_types=['photo'], func=lambda m: m.chat.type == "private")
     def photo_handler(message):
         cid = message.chat.id
         caption = message.caption if message.caption else ""
