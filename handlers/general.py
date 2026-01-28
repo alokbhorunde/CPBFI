@@ -1,4 +1,4 @@
-from handlers import pcq, other, ai_chat, login
+from handlers import assessment, other, ai_chat, login
 from utils.ai import ask_ai_free
 
 
@@ -15,9 +15,9 @@ def register(bot):
             login.handle_detail_collection(bot, message)
             return
         
-        # Check if user is collecting details for PCQ escalation
-        if pcq.is_in_pcq_detail_collection_mode(cid):
-            pcq.handle_pcq_detail_collection(bot, message)
+        # Check if user is collecting details for Assessment escalation
+        if assessment.is_in_assessment_detail_collection_mode(cid):
+            assessment.handle_assessment_detail_collection(bot, message)
             return
         
         # Check if user is in "Other Login Issue" mode
@@ -25,14 +25,14 @@ def register(bot):
             login.handle_login_other_message(bot, message)
             return
         
-        # Check if user is in "Other PCQ Issue" mode
-        if pcq.is_in_pcq_other_mode(cid):
-            pcq.handle_pcq_other_message(bot, message)
+        # Check if user is in "Other Assessment Issue" mode
+        if assessment.is_in_assessment_other_mode(cid):
+            assessment.handle_assessment_other_message(bot, message)
             return
         
-        # Check if user is in PCQ timing mode
-        if pcq.is_in_timing_mode(cid):
-            pcq.handle_timing_response(bot, message)
+        # Check if user is in Assessment timing mode
+        if assessment.is_in_timing_mode(cid):
+            assessment.handle_timing_response(bot, message)
             return
         
         # Check if user is in "Other Issue" AI mode (one-shot)
@@ -47,9 +47,9 @@ def register(bot):
         
         bot.send_chat_action(cid, "typing")
         
-        # Check for PCQ 30-min timing keywords
-        if pcq.check_pcq_timing_keywords(user_msg):
-            pcq.start_timing_flow(bot, cid)
+        # Check for assessment 30-min timing keywords
+        if assessment.check_assessment_timing_keywords(user_msg):
+            assessment.start_timing_flow(bot, cid)
             return
         
         # Respond with AI for any other message

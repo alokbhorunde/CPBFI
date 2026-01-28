@@ -15,12 +15,11 @@ bot = telebot.TeleBot(BOT_TOKEN)
 # REGISTER ALL HANDLERS
 # Order matters! More specific handlers should be registered first
 # ----------------------------------------------------------
-from handlers import login, pcq, post, lms, navigation, other, ai_chat, photo, help, general
+from handlers import login, assessment, lms, navigation, other, ai_chat, photo, help, general
 
 # Callback handlers (button clicks)
 login.register(bot)
-pcq.register(bot)
-post.register(bot)
+assessment.register(bot)
 lms.register(bot)
 navigation.register(bot)
 other.register(bot)
