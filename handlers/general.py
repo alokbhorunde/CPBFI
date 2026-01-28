@@ -1,4 +1,4 @@
-from handlers import assessment, other, ai_chat, login
+from handlers import assessment, lms, other, ai_chat, login
 from utils.ai import ask_ai_free
 
 
@@ -20,6 +20,11 @@ def register(bot):
             assessment.handle_assessment_detail_collection(bot, message)
             return
         
+        # Check if user is collecting details for LMS escalation
+        if lms.is_in_lms_detail_collection_mode(cid):
+            lms.handle_lms_detail_collection(bot, message)
+            return
+        
         # Check if user is in "Other Login Issue" mode
         if login.is_in_login_other_mode(cid):
             login.handle_login_other_message(bot, message)
@@ -28,6 +33,11 @@ def register(bot):
         # Check if user is in "Other Assessment Issue" mode
         if assessment.is_in_assessment_other_mode(cid):
             assessment.handle_assessment_other_message(bot, message)
+            return
+        
+        # Check if user is in "Other LMS Issue" mode
+        if lms.is_in_lms_other_mode(cid):
+            lms.handle_lms_other_message(bot, message)
             return
         
         # Check if user is in Assessment timing mode
