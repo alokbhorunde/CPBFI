@@ -22,9 +22,17 @@ def register(bot):
             exit_btn.add(types.InlineKeyboardButton("❌ Exit AI Chat", callback_data="exit_ai_chat"))
 
             bot.send_message(cid,
-                "💬 You are now chatting with the AI Assistant.\n"
-                "Ask anything you want.\n\n"
+                "💬 **CPBFI Support Chat**\n\n"
+                "You can ask me about:\n"
+                "• 🔐 Login & Password issues\n"
+                "• 📝 PCQ & Post Assessment\n"
+                "• 📖 LMS & Videos\n"
+                "• 🧭 Platform Navigation\n"
+                "• 👤 Profile & Documents\n"
+                "• 🎓 Certificates\n\n"
+                "⚠️ _I can only help with CPBFI platform questions._\n\n"
                 "Press 'Exit AI Chat' to return to menu.",
+                parse_mode="Markdown",
                 reply_markup=exit_btn
             )
 
