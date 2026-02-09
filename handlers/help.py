@@ -5,11 +5,7 @@ from handlers.menu import send_support_menu
 def register(bot):
     """Register help command handler for groups and DMs."""
     
-    @bot.message_handler(func=lambda m: m.text and (
-        m.text.lower().strip() == "help" or 
-        m.text.lower().startswith("/help") or
-        " help " in f" {m.text.lower()} "
-    ))
+    @bot.message_handler(func=lambda m: m.text and m.text.strip().lower() == "help")
     def help_handler(message):
         chat_id = message.chat.id
         user_id = message.from_user.id
