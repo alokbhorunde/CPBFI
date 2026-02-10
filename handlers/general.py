@@ -23,8 +23,7 @@ def clear_all_user_states(cid):
         assessment.user_assessment_escalation_attempts[cid] = {"count": 0, "issue": "", "type": ""}
     if cid in assessment.user_assessment_detail_collection:
         del assessment.user_assessment_detail_collection[cid]
-    if cid in assessment.user_assessment_timing:
-        assessment.user_assessment_timing[cid] = False
+
     
     # Clear LMS states
     if cid in lms.user_lms_other_mode:
@@ -96,10 +95,7 @@ def register(bot):
             lms.handle_lms_other_message(bot, message)
             return
         
-        # Check if user is in Assessment timing mode
-        if assessment.is_in_timing_mode(cid):
-            assessment.handle_timing_response(bot, message)
-            return
+
         
         # Check if user is in "Other Issue" AI mode (one-shot)
         if other.is_in_ai_mode(cid):
@@ -113,10 +109,7 @@ def register(bot):
         
         bot.send_chat_action(cid, "typing")
         
-        # Check for assessment 30-min timing keywords
-        if assessment.check_assessment_timing_keywords(user_msg):
-            assessment.start_timing_flow(bot, cid)
-            return
+
         
         # Respond with AI for any other message
         ai_response = ask_ai_free(message.text)

@@ -1,11 +1,9 @@
 from telebot import types
-from datetime import datetime, timedelta
 from handlers.menu import send_support_menu
 from utils.ai import ask_ai_free
 from utils.email import send_email_to_it
 
-# State for assessment timing input
-user_assessment_timing = {}
+
 
 # State for "Other Assessment Issue" - free text input
 user_assessment_other_mode = {}
@@ -59,7 +57,7 @@ def register(bot):
                 types.InlineKeyboardButton("🧪 Test Not Showing", callback_data="pcq_not_showing"),
                 types.InlineKeyboardButton("🔄 Unable to Submit", callback_data="pcq_submit"),
                 types.InlineKeyboardButton("🚪 Exited Midway", callback_data="pcq_exited"),
-                types.InlineKeyboardButton("⏰ Joined Late / PCQ Time Issue", callback_data="pcq_time"),
+                types.InlineKeyboardButton("⏰ Joined Late", callback_data="pcq_time"),
                 types.InlineKeyboardButton("❓ Other PCQ Issue", callback_data="pcq_other"),
                 types.InlineKeyboardButton("⬅️ Back", callback_data="assessment")
             )
@@ -200,35 +198,23 @@ def register(bot):
             )
 
         # --------------------------------------------------
-        # PCQ FLOW E: Joined Late / PCQ Time Issue
+        # PCQ FLOW E: Joined Late
         # --------------------------------------------------
         elif data == "pcq_time":
-            track_assessment_issue(cid, "Joined Late / Time Issue", "PCQ")
-            user_assessment_timing[cid] = True
+            track_assessment_issue(cid, "Joined Late", "PCQ")
             
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"))
-
-            bot.send_message(cid,
-                "⏰ **Joined Late / PCQ Time Issue**\n\n"
-                "Please enter the scheduled PCQ start time (HH:MM format).\n\n"
-                "Example: `10:00` or `2:30 PM`",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        # PCQ Time - Joining Now
-        elif data == "pcq_time_joining":
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
-                types.InlineKeyboardButton("✅ Joined Successfully", callback_data="assessment_fixed"),
-                types.InlineKeyboardButton("❓ Facing Issue", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="pcq_time")
+                types.InlineKeyboardButton("❓ Talk to Support", callback_data="assessment_still_not_working"),
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
             )
 
             bot.send_message(cid,
-                "🚀 **Great! Join immediately!**\n\n"
-                "If you face any issue while joining, let me know.",
+                "⏰ **Joined Late**\n\n"
+                "Since you joined late, you won't be able to access the exam.\n\n"
+                "The PCQ is only accessible during the scheduled time window. "
+                "Late entries are not permitted by the system.\n\n"
+                "If you believe this is an error, you can talk to our support team.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -496,8 +482,7 @@ def register(bot):
                 markup = types.InlineKeyboardMarkup(row_width=1)
                 markup.add(
                     types.InlineKeyboardButton("🔁 Try Again", callback_data=back_callback),
-                    types.InlineKeyboardButton("❓ Still Not Working", callback_data="assessment_still_not_working"),
-                    types.InlineKeyboardButton("⬅️ Back", callback_data=back_callback)
+                    types.InlineKeyboardButton("❓ Still Not Working", callback_data="assessment_still_not_working")
                 )
 
                 bot.send_message(cid,
@@ -541,7 +526,8 @@ def track_assessment_issue(cid, issue, assessment_type):
 def start_assessment_detail_collection(bot, cid, issue, assessment_type):
     """Start collecting user details for assessment escalation."""
     user_assessment_detail_collection[cid] = {
-        "step": "name",
+        "step": "describe",
+        "description": "",
         "name": "",
         "email": "",
         "bfsi": "",
@@ -554,8 +540,9 @@ def start_assessment_detail_collection(bot, cid, issue, assessment_type):
     
     bot.send_message(cid,
         f"📝 **Escalating {assessment_type} Issue to Support Team**\n\n"
-        "We need a few details to help you faster.\n\n"
-        "**Step 1/3:** Please enter your **Full Name**:",
+        "Before we connect you with support, please **briefly describe what exactly happened** "
+        "and what you already tried.\n\n"
+        "_Example: I refreshed the page and tried incognito mode but the quiz still shows 'Not Available'._",
         parse_mode="Markdown",
         reply_markup=markup
     )
@@ -577,7 +564,21 @@ def handle_assessment_detail_collection(bot, message):
     current_step = user_assessment_detail_collection[cid]["step"]
     assessment_type = user_assessment_detail_collection[cid].get("type", "Assessment")
     
-    if current_step == "name":
+    if current_step == "describe":
+        user_assessment_detail_collection[cid]["description"] = user_input
+        user_assessment_detail_collection[cid]["step"] = "name"
+        
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="assessment"))
+        
+        bot.send_message(cid,
+            "✅ Got it. Now we need a few details to help you.\n\n"
+            "**Step 1/3:** Please enter your **Full Name**:",
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+    
+    elif current_step == "name":
         user_assessment_detail_collection[cid]["name"] = user_input
         user_assessment_detail_collection[cid]["step"] = "email"
         
@@ -620,7 +621,8 @@ def handle_assessment_detail_collection(bot, message):
             issue=details["issue"],
             assessment_type=details["type"],
             username=message.from_user.username or "N/A",
-            user_id=message.from_user.id
+            user_id=message.from_user.id,
+            description=details.get("description", "")
         )
         
         # Confirm to user
@@ -632,7 +634,8 @@ def handle_assessment_detail_collection(bot, message):
             f"• BFSI ID: {details['bfsi']}\n"
             f"• Portal: Skillserv\n"
             f"• Assessment Type: {details['type']}\n"
-            f"• Issue: {details['issue']}\n\n"
+            f"• Issue: {details['issue']}\n"
+            f"• Description: {details['description']}\n\n"
             "🔔 Our support team will contact you shortly.\n"
             "📧 For urgent queries: support@cpbfi.org\n\n"
             "Thank you for your patience! 🙏",
@@ -649,138 +652,17 @@ def handle_assessment_detail_collection(bot, message):
     return True
 
 
-def send_assessment_escalation_email(name, email, bfsi_id, issue, assessment_type, username, user_id):
+def send_assessment_escalation_email(name, email, bfsi_id, issue, assessment_type, username, user_id, description=""):
     """Send assessment escalation email to IT team."""
     try:
-        send_email_to_it(f"{name} ({email})", f"{assessment_type} - {issue} - Skillserv")
+        issue_detail = f"{assessment_type} - {issue} - Skillserv\n\nStudent Description: {description}"
+        send_email_to_it(f"{name} ({email})", issue_detail)
         print(f"📧 Assessment Escalation email sent for {name} ({email})")
     except Exception as e:
         print(f"❌ Email error: {e}")
 
 
-def is_in_timing_mode(chat_id):
-    """Check if user is in assessment timing mode."""
-    return user_assessment_timing.get(chat_id, False)
 
-
-def handle_timing_response(bot, message):
-    """Handle user's time input for PCQ timing calculation."""
-    cid = message.chat.id
-    user_input = message.text.strip()
-    
-    bot.send_chat_action(cid, "typing")
-    
-    try:
-        # Try different time formats
-        scheduled_time = None
-        for fmt in ["%H:%M", "%I:%M %p", "%I:%M%p", "%H.%M", "%I.%M %p"]:
-            try:
-                scheduled_time = datetime.strptime(user_input.upper(), fmt)
-                break
-            except:
-                continue
-        
-        if not scheduled_time:
-            bot.send_message(cid, 
-                "❌ Sorry, I couldn't understand that time format.\n\n"
-                "Please enter your scheduled time like:\n"
-                "• 10:30\n• 2:00 PM\n• 14:30")
-            return
-        
-        # Get current time (IST)
-        now = datetime.now()
-        scheduled_today = now.replace(hour=scheduled_time.hour, minute=scheduled_time.minute, second=0)
-        
-        # Quiz is accessible ONLY within 30 min of scheduled time
-        cutoff_time = scheduled_today + timedelta(minutes=30)
-        
-        if now < scheduled_today:
-            # Before scheduled time
-            wait_mins = (scheduled_today - now).total_seconds() / 60
-            
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
-            )
-            
-            bot.send_message(cid, 
-                f"⏳ **Your quiz hasn't started yet!**\n\n"
-                f"📅 Scheduled time: {scheduled_today.strftime('%I:%M %p')}\n"
-                f"⏰ Current time: {now.strftime('%I:%M %p')}\n\n"
-                f"⏱️ Wait **{int(wait_mins)} more minutes** until your scheduled time.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-            
-        elif now <= cutoff_time:
-            # Within the 30-min window - should be accessible
-            mins_left = (cutoff_time - now).total_seconds() / 60
-            
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("🚀 Joining Now", callback_data="pcq_time_joining"),
-                types.InlineKeyboardButton("❓ Facing Issue", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
-            )
-            
-            bot.send_message(cid, 
-                f"⏳ **You are still within the allowed joining window!**\n\n"
-                f"📅 Scheduled time: {scheduled_today.strftime('%I:%M %p')}\n"
-                f"🚫 Cutoff time: {cutoff_time.strftime('%I:%M %p')}\n"
-                f"⏰ Current time: {now.strftime('%I:%M %p')}\n\n"
-                f"⏱️ You have **{int(mins_left)} minutes left** to join.\n\n"
-                "⚠️ **Join ASAP!** Do not delay further.\n\n"
-                "If you face any issue while joining, let me know.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-            
-        else:
-            # After 30 min - too late
-            mins_late = (now - cutoff_time).total_seconds() / 60
-            
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("❓ Talk to Support", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
-            )
-            
-            bot.send_message(cid, 
-                f"❌ **The allowed joining time has passed.**\n\n"
-                f"📅 Scheduled time: {scheduled_today.strftime('%I:%M %p')}\n"
-                f"🚫 Cutoff was: {cutoff_time.strftime('%I:%M %p')}\n"
-                f"⏰ Current time: {now.strftime('%I:%M %p')}\n\n"
-                f"You're **{int(mins_late)} minutes late**.\n\n"
-                "PCQ entry is usually closed 30 minutes after the start time.\n"
-                "You may need to contact support for further assistance.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-        
-        user_assessment_timing[cid] = False
-        
-    except Exception as e:
-        bot.send_message(cid, "❌ Couldn't process that. Please enter time like: 10:30 or 2:00 PM")
-        print(f"Assessment timing error: {e}")
-
-
-def check_assessment_timing_keywords(message_text):
-    """Check if message contains assessment 30-min timing keywords."""
-    keywords = ["30 min", "30min", "revised time", "can't start quiz", 
-                "cant start quiz", "quiz not accessible", "30 minute", "joined late"]
-    return any(keyword in message_text.lower() for keyword in keywords)
-
-
-def start_timing_flow(bot, cid):
-    """Start the PCQ timing check flow."""
-    user_assessment_timing[cid] = True
-    bot.send_message(cid, 
-        "🕐 **PCQ Time Check**\n\n"
-        "Let me help you check if you can access the quiz now.\n\n"
-        "📝 **What was your scheduled quiz time?**\n"
-        "(Example: 10:30 or 2:00 PM)",
-        parse_mode="Markdown"
-    )
 
 
 def is_in_assessment_other_mode(chat_id):
@@ -812,7 +694,7 @@ def handle_assessment_other_message(bot, message):
         types.InlineKeyboardButton(f"⬅️ Back to {assessment_type} Menu", callback_data=back_callback)
     )
     
-    bot.send_message(cid, ai_response, reply_markup=markup)
+    bot.send_message(cid, ai_response, reply_markup=markup, parse_mode="Markdown")
     
     # Clear the mode
     user_assessment_other_mode[cid] = {"active": False, "type": ""}
