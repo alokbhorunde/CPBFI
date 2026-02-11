@@ -61,12 +61,14 @@ def register(bot):
             portal = data.split("_")[-1].capitalize()
             track_issue(cid, portal, "Invalid/Wrong Credentials")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Try Again", callback_data=f"login_portal_{portal.lower()}"),
                 types.InlineKeyboardButton("Forgot Password", callback_data=f"login_forgot_{portal.lower()}"),
-                types.InlineKeyboardButton("Still Not Working", callback_data=f"login_still_not_working_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}")
+                types.InlineKeyboardButton("Still Not Working", callback_data=f"login_still_not_working_{portal.lower()}")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="login_back_menu")
             )
 
             bot.send_message(cid,
@@ -77,7 +79,8 @@ def register(bot):
                 "   • Password (check caps lock)\n\n"
                 "2. Confirm you are using the same email ID used during registration.\n\n"
                 "3. Try closing the browser tab completely and log in again.\n\n"
-                "4. If possible, try logging in from another device or browser.",
+                "4. If possible, try logging in from another device or browser.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -86,11 +89,13 @@ def register(bot):
             portal = data.split("_")[-1].capitalize()
             track_issue(cid, portal, "OTP Not Received")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
+                types.InlineKeyboardButton("Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}")
+            )
+            markup.add(
                 types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="login_back_menu")
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="login_back_menu")
             )
 
             bot.send_message(cid,
@@ -102,7 +107,8 @@ def register(bot):
                 "4. Try a different browser (Chrome, Edge, Firefox).\n"
                 "5. Try a different device (phone, tablet, laptop).\n"
                 "6. Ensure you're on a stable internet connection.\n\n"
-                "_Requesting too many OTPs may temporarily block delivery._",
+                "_Requesting too many OTPs may temporarily block delivery._\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -137,68 +143,30 @@ def register(bot):
                     reply_markup=markup
                 )
 
-        elif data.startswith("login_forgot_") and not data.startswith("login_forgot_retry_") and not data.startswith("login_forgot_otp_"):
+        elif data.startswith("login_forgot_"):
             portal = data.split("_")[-1].capitalize()
             track_issue(cid, portal, "Forgot Password")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Try Again", callback_data=f"login_forgot_retry_{portal.lower()}"),
-                types.InlineKeyboardButton("OTP / Reset Link Not Received", callback_data=f"login_forgot_otp_{portal.lower()}"),
-                types.InlineKeyboardButton("Still Facing Issue", callback_data=f"login_still_not_working_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}")
+                types.InlineKeyboardButton("Still Facing Issue", callback_data=f"login_still_not_working_{portal.lower()}")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="login_back_menu")
             )
 
             bot.send_message(cid,
                 f"**Forgot Password — {portal}**\n\n"
-                "Please make sure:\n\n"
-                "1. You selected the correct portal:\n"
-                f"   • **{portal}**\n\n"
-                "2. You entered the **registered email ID**.\n\n"
-                "3. Check **Spam / Junk** folder for reset email.\n\n"
-                "4. Close the browser window and try again after a few minutes.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data.startswith("login_forgot_retry_"):
-            portal = data.split("_")[-1].capitalize()
-
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Worked!", callback_data="login_fixed"),
-                types.InlineKeyboardButton("Still Facing Issue", callback_data=f"login_still_not_working_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_forgot_{portal.lower()}")
-            )
-
-            bot.send_message(cid,
-                "**Try Again**\n\n"
-                "1. Close all browser tabs\n"
-                "2. Clear browser cache\n"
-                "3. Go to the login page again\n"
-                "4. Click 'Forgot Password'\n"
-                "5. Enter your registered email ID carefully",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data.startswith("login_forgot_otp_"):
-            portal = data.split("_")[-1].capitalize()
-
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("Resend Reset Link", callback_data=f"login_forgot_retry_{portal.lower()}"),
-                types.InlineKeyboardButton("Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_forgot_{portal.lower()}")
-            )
-
-            bot.send_message(cid,
-                "**Reset Link / OTP Not Received**\n\n"
-                "Please check:\n\n"
-                "1. Check your **Spam / Junk** folder\n"
-                "2. Wait **2–3 minutes** before requesting again\n"
-                "3. Ensure you entered the correct email ID\n\n"
-                "_Too many requests may temporarily block delivery._",
+                "Please try the following steps:\n\n"
+                "1. Close all browser tabs and clear cache.\n"
+                "2. Go to the login page and click 'Forgot Password'.\n"
+                "3. Enter your **registered email ID** carefully.\n"
+                "4. Wait **2–3 minutes** for the reset link.\n"
+                "5. Check your **Spam / Junk** folder.\n"
+                "6. If not received, try again after a few minutes.\n\n"
+                "_Too many requests may temporarily block delivery._\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
