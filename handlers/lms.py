@@ -39,11 +39,13 @@ def register(bot):
         elif data == "lms_videos_not_visible":
             track_lms_issue(cid, "Batch Videos Not Visible")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("✅ I'll Check Again", callback_data="lms_fixed"),
-                types.InlineKeyboardButton("Still Not Visible", callback_data="lms_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="lms")
+                types.InlineKeyboardButton("Still Not Visible", callback_data="lms_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="lms"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="lms_back_menu")
             )
 
             bot.send_message(cid,
@@ -52,7 +54,8 @@ def register(bot):
                 "1. Batch videos are assigned only after batch launch.\n"
                 "2. System sync may take some time after launch.\n"
                 "3. Log out and log in again.\n"
-                "4. Refresh your dashboard and check for updates.",
+                "4. Refresh your dashboard and check for updates.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -60,10 +63,13 @@ def register(bot):
         elif data == "lms_videos_not_playing":
             track_lms_issue(cid, "Videos Not Playing")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Tried All Steps", callback_data="lms_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="lms")
+                types.InlineKeyboardButton("Tried All Steps", callback_data="lms_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="lms"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="lms_back_menu")
             )
 
             bot.send_message(cid,
@@ -73,7 +79,8 @@ def register(bot):
                 "2. Check your internet connection.\n"
                 "3. Refresh the page once.\n"
                 "4. Clear browser cache if required.\n"
-                "5. Log out and log in again before retrying.",
+                "5. Log out and log in again before retrying.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -81,11 +88,13 @@ def register(bot):
         elif data == "lms_progress":
             track_lms_issue(cid, "Progress / Completion Not Updated")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("✅ I'll Recheck Progress", callback_data="lms_fixed"),
-                types.InlineKeyboardButton("Still Not Updated", callback_data="lms_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="lms")
+                types.InlineKeyboardButton("Still Not Updated", callback_data="lms_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="lms"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="lms_back_menu")
             )
 
             bot.send_message(cid,
@@ -96,7 +105,8 @@ def register(bot):
                 "3. Follow the learning sequence strictly.\n"
                 "4. Avoid skipping videos.\n"
                 "5. Log out and log in again after some time.\n"
-                "6. Refresh the dashboard.",
+                "6. Refresh the dashboard.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -104,17 +114,21 @@ def register(bot):
         elif data == "lms_expired":
             track_lms_issue(cid, "Course Expired / Access Duration")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("⬅️ Back to LMS Menu", callback_data="lms"),
                 types.InlineKeyboardButton("Still Have a Question", callback_data="lms_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="lms"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="lms_back_menu")
             )
 
             bot.send_message(cid,
                 "**Course Expired / LMS Access Duration**\n\n"
                 "Regarding LMS content access:\n\n"
                 "LMS access is available for **30 to 45 days** from the batch launch date.\n\n"
-                "After this period, course content may show as expired.",
+                "After this period, course content may show as expired.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -123,8 +137,11 @@ def register(bot):
             user_lms_other_mode[cid] = True
             track_lms_issue(cid, "Other LMS Issue")
 
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="lms"))
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="lms"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="lms_back_menu")
+            )
 
             bot.send_message(cid,
                 "**Other LMS Issue**\n\n"
@@ -145,10 +162,13 @@ def register(bot):
             if attempts >= 2:
                 start_lms_detail_collection(bot, cid, user_lms_escalation_attempts[cid].get("issue", "LMS Issue"))
             else:
-                markup = types.InlineKeyboardMarkup(row_width=1)
+                markup = types.InlineKeyboardMarkup(row_width=2)
                 markup.add(
-                    types.InlineKeyboardButton("Try Again", callback_data="lms"),
                     types.InlineKeyboardButton("Still Not Working", callback_data="lms_still_not_working")
+                )
+                markup.add(
+                    types.InlineKeyboardButton("⬅️ Back", callback_data="lms"),
+                    types.InlineKeyboardButton("⬅️ Main Menu", callback_data="lms_back_menu")
                 )
 
                 bot.send_message(cid,
@@ -158,7 +178,8 @@ def register(bot):
                     "2. Try in Incognito/Private mode\n"
                     "3. Use a different browser (Chrome recommended)\n"
                     "4. Check your internet connection\n\n"
-                    f"_Attempt {attempts}/2 - After 2 attempts, we'll connect you with support._",
+                    f"_Attempt {attempts}/2 - After 2 attempts, we'll connect you with support._\n\n"
+                    "Select an option below if you need further help.",
                     parse_mode="Markdown",
                     reply_markup=markup
                 )
@@ -302,11 +323,14 @@ def handle_lms_other_message(bot, message):
     prompt = f"User is facing an LMS/Video issue on Skillserv portal. Their issue: {user_query}"
     ai_response = ask_ai_free(prompt)
 
-    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         types.InlineKeyboardButton("✅ Issue Resolved", callback_data="lms_fixed"),
-        types.InlineKeyboardButton("Still Need Help", callback_data="lms_still_not_working"),
-        types.InlineKeyboardButton("⬅️ Back to LMS Menu", callback_data="lms")
+        types.InlineKeyboardButton("Still Need Help", callback_data="lms_still_not_working")
+    )
+    markup.add(
+        types.InlineKeyboardButton("⬅️ Back", callback_data="lms"),
+        types.InlineKeyboardButton("⬅️ Main Menu", callback_data="lms_back_menu")
     )
 
     bot.send_message(cid, ai_response, reply_markup=markup, parse_mode="Markdown")

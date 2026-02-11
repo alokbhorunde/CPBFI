@@ -57,11 +57,13 @@ def register(bot):
         elif data == "pcq_where":
             track_assessment_issue(cid, "Where is the Quiz", "PCQ")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Refresh & Try Again", callback_data="pcq_where_refresh"),
-                types.InlineKeyboardButton("Still Not Visible", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
+                types.InlineKeyboardButton("Still Not Visible", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -70,26 +72,10 @@ def register(bot):
                 "1. Login to the Skillserv portal.\n"
                 "2. Go to your dashboard.\n"
                 "3. Look for the PCQ / Assessment section.\n"
-                "4. Click on the active quiz link.\n\n"
-                "If you still cannot find it, please try refreshing the page once.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data == "pcq_where_refresh":
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Found it!", callback_data="assessment_fixed"),
-                types.InlineKeyboardButton("Still Not Visible", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="pcq_where")
-            )
-
-            bot.send_message(cid,
-                "**Refresh & Try Again**\n\n"
-                "1. Press Ctrl+F5 to hard refresh\n"
-                "2. Or close and reopen the browser\n"
-                "3. Login again and check the dashboard\n\n"
-                "Can you see the quiz now?",
+                "4. Click on the active quiz link.\n"
+                "5. If not visible, press Ctrl+F5 to hard refresh.\n"
+                "6. Or close and reopen the browser, then login again.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -97,10 +83,13 @@ def register(bot):
         elif data == "pcq_not_showing":
             track_assessment_issue(cid, "Test Not Showing", "PCQ")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Tried All Steps", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
+                types.InlineKeyboardButton("Tried All Steps", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -109,7 +98,8 @@ def register(bot):
                 "1. Refresh the page once.\n"
                 "2. Ensure you are logged in using the registered email ID.\n"
                 "3. Close the browser tab and login again.\n"
-                "4. Try accessing the portal from another device or browser.",
+                "4. Try accessing the portal from another device or browser.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -117,11 +107,13 @@ def register(bot):
         elif data == "pcq_submit":
             track_assessment_issue(cid, "Unable to Submit", "PCQ")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Had to Exit Midway", callback_data="pcq_exited"),
-                types.InlineKeyboardButton("Still Unable to Submit", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
+                types.InlineKeyboardButton("Still Unable to Submit", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -130,7 +122,8 @@ def register(bot):
                 "1. Ensure all questions are attempted.\n"
                 "2. Check your internet connection.\n"
                 "3. Wait for a few seconds and try submitting again.\n"
-                "4. Avoid refreshing the page repeatedly.",
+                "4. Avoid refreshing the page repeatedly.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -138,34 +131,22 @@ def register(bot):
         elif data == "pcq_exited":
             track_assessment_issue(cid, "Exited Midway", "PCQ")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Tried Rejoining", callback_data="pcq_rejoin_tried"),
-                types.InlineKeyboardButton("Cannot Rejoin", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
+                types.InlineKeyboardButton("Cannot Rejoin", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
                 "**Exited Midway**\n\n"
                 "If you exited the PCQ midway:\n\n"
-                "• In most cases, re-entry depends on system rules.\n"
-                "• Please login again and check if the quiz resumes automatically.\n\n"
-                "If the test does not resume, you may need support assistance.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data == "pcq_rejoin_tried":
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Resumed Successfully", callback_data="assessment_fixed"),
-                types.InlineKeyboardButton("Cannot Rejoin", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="pcq_exited")
-            )
-
-            bot.send_message(cid,
-                "**Tried Rejoining**\n\n"
-                "Were you able to resume the quiz?",
+                "1. Login again and check if the quiz resumes automatically.\n"
+                "2. In most cases, re-entry depends on system rules.\n\n"
+                "If the test does not resume, you may need support assistance.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -173,10 +154,13 @@ def register(bot):
         elif data == "pcq_time":
             track_assessment_issue(cid, "Joined Late", "PCQ")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Talk to Support", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq")
+                types.InlineKeyboardButton("Talk to Support", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -184,7 +168,8 @@ def register(bot):
                 "Since you joined late, you won't be able to access the exam.\n\n"
                 "The PCQ is only accessible during the scheduled time window. "
                 "Late entries are not permitted by the system.\n\n"
-                "If you believe this is an error, you can talk to our support team.",
+                "If you believe this is an error, you can talk to our support team.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -193,8 +178,11 @@ def register(bot):
             user_assessment_other_mode[cid] = {"active": True, "type": "PCQ"}
             track_assessment_issue(cid, "Other PCQ Issue", "PCQ")
 
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"))
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_pcq"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
+            )
 
             bot.send_message(cid,
                 "**Other PCQ Issue**\n\n"
@@ -228,11 +216,13 @@ def register(bot):
         elif data == "post_not_visible":
             track_assessment_issue(cid, "Assessment Not Visible", "Post Assessment")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Refresh & Try Again", callback_data="post_refresh"),
-                types.InlineKeyboardButton("Still Not Visible", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post")
+                types.InlineKeyboardButton("Still Not Visible", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -241,26 +231,10 @@ def register(bot):
                 "1. Login to the Skillserv portal.\n"
                 "2. Go to your dashboard.\n"
                 "3. Look for the Assessment / Test section.\n"
-                "4. Ensure the assessment time window is active.\n\n"
-                "If you still cannot find it, please try refreshing the page.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data == "post_refresh":
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Found it!", callback_data="assessment_fixed"),
-                types.InlineKeyboardButton("Still Not Visible", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="post_not_visible")
-            )
-
-            bot.send_message(cid,
-                "**Refresh & Try Again**\n\n"
-                "1. Press Ctrl+F5 to hard refresh\n"
-                "2. Or close and reopen the browser\n"
-                "3. Login again and check the dashboard\n\n"
-                "Can you see the assessment now?",
+                "4. Ensure the assessment time window is active.\n"
+                "5. Press Ctrl+F5 to hard refresh.\n"
+                "6. Or close and reopen the browser, then login again.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -268,10 +242,13 @@ def register(bot):
         elif data == "post_not_loading":
             track_assessment_issue(cid, "Test Not Loading", "Post Assessment")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Tried All Steps", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post")
+                types.InlineKeyboardButton("Tried All Steps", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -281,7 +258,8 @@ def register(bot):
                 "2. Clear browser cache and cookies.\n"
                 "3. Try in Incognito/Private mode.\n"
                 "4. Try accessing from another device or browser.\n"
-                "5. Check your internet connection.",
+                "5. Check your internet connection.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -289,11 +267,13 @@ def register(bot):
         elif data == "post_submit":
             track_assessment_issue(cid, "Unable to Submit", "Post Assessment")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Had to Exit Midway", callback_data="post_exited"),
-                types.InlineKeyboardButton("Still Unable to Submit", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post")
+                types.InlineKeyboardButton("Still Unable to Submit", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -303,7 +283,8 @@ def register(bot):
                 "2. Check your internet connection.\n"
                 "3. Wait for a few seconds and try submitting again.\n"
                 "4. Avoid refreshing the page repeatedly.\n"
-                "5. Check if you are within the allowed time window.",
+                "5. Check if you are within the allowed time window.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -311,34 +292,22 @@ def register(bot):
         elif data == "post_exited":
             track_assessment_issue(cid, "Exited Midway", "Post Assessment")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("Tried Rejoining", callback_data="post_rejoin_tried"),
-                types.InlineKeyboardButton("Cannot Rejoin", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post")
+                types.InlineKeyboardButton("Cannot Rejoin", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
                 "**Exited Midway**\n\n"
                 "If you exited the Post Assessment midway:\n\n"
-                "• In most cases, re-entry depends on system rules.\n"
-                "• Please login again and check if the test resumes automatically.\n\n"
-                "If the test does not resume, you may need support assistance.",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data == "post_rejoin_tried":
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Resumed Successfully", callback_data="assessment_fixed"),
-                types.InlineKeyboardButton("Cannot Rejoin", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="post_exited")
-            )
-
-            bot.send_message(cid,
-                "**Tried Rejoining**\n\n"
-                "Were you able to resume the assessment?",
+                "1. Login again and check if the test resumes automatically.\n"
+                "2. In most cases, re-entry depends on system rules.\n\n"
+                "If the test does not resume, you may need support assistance.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -346,11 +315,13 @@ def register(bot):
         elif data == "post_time":
             track_assessment_issue(cid, "Time Window Issue", "Post Assessment")
 
-            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup = types.InlineKeyboardMarkup(row_width=2)
             markup.add(
-                types.InlineKeyboardButton("✅ Within Time Window", callback_data="post_time_active"),
-                types.InlineKeyboardButton("❌ Time Window Passed", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post")
+                types.InlineKeyboardButton("Still Facing Issue", callback_data="assessment_still_not_working")
+            )
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
             )
 
             bot.send_message(cid,
@@ -359,28 +330,10 @@ def register(bot):
                 "Please check:\n"
                 "1. Is your assessment time window currently active?\n"
                 "2. Check the scheduled time in your course calendar.\n"
-                "3. Ensure you are attempting within the allowed hours.\n\n"
-                "Are you within the allowed time window?",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data == "post_time_active":
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Found it!", callback_data="assessment_fixed"),
-                types.InlineKeyboardButton("Still Facing Issue", callback_data="assessment_still_not_working"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data="post_time")
-            )
-
-            bot.send_message(cid,
-                "**Time Window Active**\n\n"
-                "If your time window is active but you still cannot access:\n\n"
-                "1. Refresh the page (Ctrl+F5)\n"
-                "2. Clear browser cache\n"
-                "3. Try a different browser\n"
-                "4. Login again\n\n"
-                "Can you access the assessment now?",
+                "3. Ensure you are attempting within the allowed hours.\n"
+                "4. If active, try refreshing the page (Ctrl+F5).\n"
+                "5. Clear browser cache and try a different browser.\n\n"
+                "Select an option below if you need further help.",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
@@ -389,8 +342,11 @@ def register(bot):
             user_assessment_other_mode[cid] = {"active": True, "type": "Post Assessment"}
             track_assessment_issue(cid, "Other Post Assessment Issue", "Post Assessment")
 
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post"))
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            markup.add(
+                types.InlineKeyboardButton("⬅️ Back", callback_data="assessment_post"),
+                types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
+            )
 
             bot.send_message(cid,
                 "**Other Post Assessment Issue**\n\n"
@@ -418,10 +374,13 @@ def register(bot):
             else:
                 back_callback = "assessment_pcq" if assessment_type == "PCQ" else "assessment_post"
 
-                markup = types.InlineKeyboardMarkup(row_width=1)
+                markup = types.InlineKeyboardMarkup(row_width=2)
                 markup.add(
-                    types.InlineKeyboardButton("Try Again", callback_data=back_callback),
                     types.InlineKeyboardButton("Still Not Working", callback_data="assessment_still_not_working")
+                )
+                markup.add(
+                    types.InlineKeyboardButton("⬅️ Back", callback_data=back_callback),
+                    types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
                 )
 
                 bot.send_message(cid,
@@ -430,7 +389,8 @@ def register(bot):
                     "1. Clear your browser cache\n"
                     "2. Try in Incognito/Private mode\n"
                     "3. Use a different browser or device\n\n"
-                    f"_Attempt {attempts}/2 - After 2 attempts, we'll connect you with support._",
+                    f"_Attempt {attempts}/2 - After 2 attempts, we'll connect you with support._\n\n"
+                    "Select an option below if you need further help.",
                     parse_mode="Markdown",
                     reply_markup=markup
                 )
@@ -604,11 +564,14 @@ def handle_assessment_other_message(bot, message):
 
     back_callback = "assessment_pcq" if assessment_type == "PCQ" else "assessment_post"
 
-    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         types.InlineKeyboardButton("✅ Issue Resolved", callback_data="assessment_fixed"),
-        types.InlineKeyboardButton("Still Need Help", callback_data="assessment_still_not_working"),
-        types.InlineKeyboardButton(f"⬅️ Back to {assessment_type} Menu", callback_data=back_callback)
+        types.InlineKeyboardButton("Still Need Help", callback_data="assessment_still_not_working")
+    )
+    markup.add(
+        types.InlineKeyboardButton("⬅️ Back", callback_data=back_callback),
+        types.InlineKeyboardButton("⬅️ Main Menu", callback_data="assessment_back_menu")
     )
 
     bot.send_message(cid, ai_response, reply_markup=markup, parse_mode="Markdown")

@@ -126,10 +126,13 @@ def register(bot):
             if attempts >= 2:
                 start_detail_collection(bot, cid, portal, user_escalation_attempts[cid].get("issue", "Login Issue"))
             else:
-                markup = types.InlineKeyboardMarkup(row_width=1)
+                markup = types.InlineKeyboardMarkup(row_width=2)
                 markup.add(
-                    types.InlineKeyboardButton("Try Again", callback_data=f"login_portal_{portal.lower()}"),
                     types.InlineKeyboardButton("Still Not Working", callback_data=f"login_still_not_working_{portal.lower()}")
+                )
+                markup.add(
+                    types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}"),
+                    types.InlineKeyboardButton("⬅️ Main Menu", callback_data="login_back_menu")
                 )
 
                 bot.send_message(cid,
@@ -138,7 +141,8 @@ def register(bot):
                     "1. Clear your browser cache\n"
                     "2. Try in Incognito/Private mode\n"
                     "3. Use a different browser or device\n\n"
-                    f"_Attempt {attempts}/2 - After 2 attempts, we'll connect you with support._",
+                    f"_Attempt {attempts}/2 - After 2 attempts, we'll connect you with support._\n\n"
+                    "Select an option below if you need further help.",
                     parse_mode="Markdown",
                     reply_markup=markup
                 )
