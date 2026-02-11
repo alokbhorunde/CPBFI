@@ -1,532 +1,511 @@
-# 🤖 CPBFI Helpdesk Telegram Bot
+# CPBFI Helpdesk Telegram Bot
 
-A professional, AI-powered Telegram bot for student support at CPBFI (Centre for Promotion of Banking, Finance & Insurance). The bot provides instant assistance for login issues, assessments, LMS navigation, and more.
-
----
-
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Project Structure](#-project-structure)
-- [Handlers Documentation](#-handlers-documentation)
-- [Utilities Documentation](#-utilities-documentation)
-- [Bot Flows](#-bot-flows)
-- [API Reference](#-api-reference)
-- [Contributing](#-contributing)
+A modular IT helpdesk support bot for the **CPBFI (Centre for Promotion of Banking and Financial Inclusion)** platform. It assists students with login issues, assessment problems (PCQ & Post Assessment), LMS/video troubleshooting, platform navigation, and general AI-powered support chat — all via Telegram.
 
 ---
 
-## ✨ Features
+## Table of Contents
 
-| Feature | Description |
-|---------|-------------|
-| 🔐 **Login Support** | Troubleshooting for Skillserv & Knowlens portal access |
-| 📚 **Assessment Help** | PCQ and Post Assessment issue resolution |
-| 📖 **LMS Assistance** | Video playback, progress tracking, course access |
-| 🧭 **Navigation Guides** | Step-by-step platform tutorials for students |
-| 🤖 **AI Chat** | Groq-powered AI for CPBFI-specific queries |
-| 📧 **Auto-Escalation** | Smart escalation with email notifications to IT |
-| 📷 **Screenshot Analysis** | Caption-based troubleshooting from screenshots |
-| 👥 **Group Support** | Works in groups with DM-based interaction |
+- [Architecture Overview](#architecture-overview)
+- [Project Structure](#project-structure)
+- [Bot Flow](#bot-flow)
+  - [Main Menu](#main-menu)
+  - [Login Flow](#login-flow)
+  - [Assessment Flow](#assessment-flow)
+  - [LMS Flow](#lms-flow)
+  - [Other Flows](#other-flows)
+- [Escalation Mechanism](#escalation-mechanism)
+- [AI Integration](#ai-integration)
+- [Setup & Installation](#setup--installation)
+- [Environment Variables](#environment-variables)
+- [Running the Bot](#running-the-bot)
+- [Deployment Guide](#deployment-guide)
+- [Production Considerations](#production-considerations)
+- [File-by-File Reference](#file-by-file-reference)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## 🏗 Architecture
+## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                          TELEGRAM API                          │
-└─────────────────────────────────────────────────────────────────┘
-                                 │
-                                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                          main.py                                │
-│                    (Bot Initialization)                         │
-└─────────────────────────────────────────────────────────────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│    HANDLERS     │    │     UTILS       │    │   EXTERNAL      │
-├─────────────────┤    ├─────────────────┤    ├─────────────────┤
-│ • login.py      │    │ • ai.py         │    │ • Groq API      │
-│ • assessment.py │    │ • email.py      │    │ • Gmail SMTP    │
-│ • lms.py        │    │ • prompts.py    │    │                 │
-│ • navigation.py │    │                 │    │                 │
-│ • ai_chat.py    │    │                 │    │                 │
-│ • other.py      │    │                 │    │                 │
-│ • photo.py      │    │                 │    │                 │
-│ • help.py       │    │                 │    │                 │
-│ • general.py    │    │                 │    │                 │
-│ • menu.py       │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌──────────────────────────────────────────────────┐
+│                   Telegram API                    │
+└──────────────────┬───────────────────────────────┘
+                   │
+          ┌────────▼────────┐
+          │     main.py     │  ← Entry point, env validation, handler registration
+          └────────┬────────┘
+                   │
+     ┌─────────────┼──────────────────────┐
+     │             │                      │
+     ▼             ▼                      ▼
+┌─────────┐  ┌──────────┐          ┌──────────┐
+│handlers/│  │handlers/ │   ...    │  utils/   │
+│login.py │  │assess... │          │  ai.py    │
+│         │  │          │          │  email.py │
+└─────────┘  └──────────┘          │  prompts  │
+                                   │  valid... │
+                                   └──────────┘
 ```
+
+**Key design decisions:**
+
+- **Modular handlers** — Each support category (login, assessment, LMS, etc.) is a separate file with its own `register(bot)` function.
+- **No database** — All user state is stored in in-memory Python dictionaries (e.g., `user_escalation_attempts`, `user_detail_collection`). State resets on bot restart.
+- **AI-powered fallback** — When troubleshooting steps fail, AI (Groq/Llama) provides contextual help before escalation.
+- **Email escalation** — When a user exhausts troubleshooting attempts (2+), the bot collects their details and emails the IT support team.
 
 ---
 
-## 🚀 Installation
-
-### Prerequisites
-
-- Python 3.8+
-- Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
-- Groq API Key (for AI features)
-- Gmail App Password (for email escalation)
-
-### Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/alokbhorunde/CPBFI.git
-cd CPBFI
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your credentials
-
-# Run the bot
-python main.py
-```
-
----
-
-## ⚙ Configuration
-
-Create a `.env` file with the following variables:
-
-```env
-# Telegram Bot
-BOT_TOKEN=your_telegram_bot_token
-
-# Groq AI
-GROQ_API_KEY=your_groq_api_key
-
-# Email Configuration (for escalation)
-SENDER_EMAIL=your_email@gmail.com
-SENDER_PASSWORD=your_app_password
-RECEIVER_EMAIL=it_support@company.com
-```
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 cpbfi-bot/
-├── main.py                 # Entry point, bot initialization
-├── requirements.txt        # Python dependencies
-├── .env                    # Environment variables (not in git)
-├── .gitignore             # Git ignore rules
+├── main.py                  # Entry point — env validation, logging, handler registration
+├── requirements.txt         # Python dependencies
+├── .env                     # Environment variables (secrets — NOT in git)
+├── .env.example             # Template for .env
+├── .gitignore
 │
-├── handlers/              # All message & callback handlers
-│   ├── __init__.py        # Package initialization
-│   ├── menu.py            # Main support menu
-│   ├── login.py           # Login issue handling
-│   ├── assessment.py      # PCQ & Post Assessment flows
-│   ├── lms.py             # LMS & video issues
-│   ├── navigation.py      # Platform navigation guides
-│   ├── ai_chat.py         # Continuous AI chat mode
-│   ├── other.py           # One-shot AI for misc issues
-│   ├── photo.py           # Screenshot/photo processing
-│   ├── help.py            # /help command (groups + DMs)
-│   └── general.py         # Catch-all message router
+├── handlers/                # All Telegram message/callback handlers
+│   ├── __init__.py
+│   ├── menu.py              # Main support menu (shared by all handlers)
+│   ├── login.py             # Login issue flow (Skillserv / Knowlens)
+│   ├── assessment.py        # Assessment issues (PCQ + Post Assessment)
+│   ├── lms.py               # LMS / Videos issues
+│   ├── navigation.py        # Platform navigation help
+│   ├── other.py             # "Other Issue" — AI-assisted
+│   ├── ai_chat.py           # Free-form AI chat mode
+│   ├── help.py              # /help command & group message handler
+│   ├── photo.py             # Screenshot/photo handler
+│   └── general.py           # Catch-all for private messages + state routing
 │
-└── utils/                 # Utility modules
-    ├── __init__.py        # Package initialization
-    ├── ai.py              # Groq API integration
-    ├── email.py           # Email notification system
-    └── prompts.py         # AI system prompts
+└── utils/                   # Shared utilities
+    ├── __init__.py
+    ├── ai.py                # Groq AI integration (with rate limit retry)
+    ├── email.py             # SMTP email sender for escalation
+    ├── prompts.py           # AI system prompts (SYSTEM_PROMPT, HUMAN_CHAT_PROMPT)
+    └── validators.py        # Input validators (email format)
 ```
 
 ---
 
-## 📚 Handlers Documentation
+## Bot Flow
 
-### 1. `main.py` - Entry Point
+### Main Menu
 
-**Purpose:** Initializes the bot and registers all handlers in the correct order.
+When a user starts the bot or sends "hi/hello/menu/start", they see:
+
+```
+┌─────────────────────────────────┐
+│      CPBFI Helpdesk             │
+├─────────────┬───────────────────┤
+│   Login     │   Assessment      │
+├─────────────┼───────────────────┤
+│   LMS       │   Navigation Help │
+├─────────────┼───────────────────┤
+│ Other Issue │                   │
+├─────────────┴───────────────────┤
+│        Chat with Us             │
+└─────────────────────────────────┘
+```
+
+### Login Flow
+
+```
+Main Menu
+  └── Login Issue
+       ├── Skillserv Portal ─┐
+       └── Knowlens Portal  ─┤
+                              └── Select Issue Type
+                                   ├── Invalid/Wrong Credentials → Tips → Still Not Working?
+                                   ├── OTP Not Received           → Tips → Still Not Received?
+                                   ├── Forgot Password            → Tips → Still Facing Issue?
+                                   └── Other Login Issue           → AI analyzes user's description
+                                                                          │
+                                                     ┌─────────────────────┘
+                                                     ▼
+                                        "Still Not Working" counter
+                                           Attempt 1 → more tips
+                                           Attempt 2 → ESCALATION
+                                                         │
+                                                         ▼
+                                              Collect: Name → Email → BFSI ID
+                                              Send email to IT team
+                                              Show confirmation
+```
+
+### Assessment Flow
+
+```
+Main Menu
+  └── Assessment Issues (Skillserv)
+       ├── Pre-Course Quiz (PCQ)
+       │    ├── Where is the Quiz?
+       │    ├── Test Not Showing
+       │    ├── Unable to Submit
+       │    ├── Exited Midway
+       │    ├── Joined Late
+       │    └── Other PCQ Issue → AI help
+       │
+       └── Post Assessment
+            ├── Assessment Not Visible
+            ├── Test Not Loading
+            ├── Unable to Submit
+            ├── Exited Midway
+            ├── Time Window Issue
+            └── Other Post Assessment Issue → AI help
+
+       All sub-issues → "Still Not Working?" → Escalation after 2 attempts
+       (same Name → Email → BFSI ID collection)
+```
+
+### LMS Flow
+
+```
+Main Menu
+  └── LMS / Videos Issue
+       ├── Batch Videos Not Visible
+       ├── Videos Not Playing
+       ├── Progress / Completion Not Updated
+       ├── Course Expired / Access Duration
+       └── Other LMS Issue → AI help
+
+       All sub-issues → "Still Not Working?" → Escalation after 2 attempts
+```
+
+### Other Flows
+
+| Flow | Handler | Description |
+|------|---------|-------------|
+| **Other Issue** | `other.py` | User describes issue → AI reply → Resolved? / Still Need Help / Main Menu |
+| **Chat with Us** | `ai_chat.py` | Free-form AI chat (CPBFI-only questions). Exit button after every reply. |
+| **Navigation Help** | `navigation.py` | Step-by-step platform usage guide for students |
+| **Help (Groups)** | `help.py` | Typing "help" in a group → bot DMs the user with the support menu |
+| **Photo/Screenshot** | `photo.py` | Bot analyzes caption keywords and gives relevant tips |
+
+---
+
+## Escalation Mechanism
+
+The escalation system is the most critical part of the bot:
+
+1. **Counter tracking** — Each handler tracks escalation attempts per user in a dictionary:
+   - `user_escalation_attempts` (login)
+   - `user_assessment_escalation_attempts` (assessment)
+   - `user_lms_escalation_attempts` (lms)
+
+2. **Threshold** — After **2 "Still Not Working" clicks**, the bot triggers detail collection.
+
+3. **Detail collection** — A 3-step form:
+   - Step 1: Full Name
+   - Step 2: Email ID (validated with regex)
+   - Step 3: BFSI ID
+
+4. **Email dispatch** — Details are sent to the IT team via SMTP (Gmail). If the email fails, the user sees a fallback message with direct contact info.
+
+5. **Counter preservation** — Counters are NOT reset when navigating back to menus (only when explicitly resolved or after successful escalation).
+
+> **Important:** State is in-memory. If the bot restarts, all counters and in-progress collections are lost.
+
+---
+
+## AI Integration
+
+The bot uses **Groq's free tier** with the `llama-3.1-8b-instant` model.
+
+| Mode | System Prompt | Used In |
+|------|--------------|---------|
+| `SYSTEM_PROMPT` | IT helpdesk persona — short, focused responses | "Other Issue" handlers, fallback in `general.py` |
+| `HUMAN_CHAT_PROMPT` | CPBFI-only Q&A — rejects non-platform questions | "Chat with Us" (`ai_chat.py`) |
+
+**Rate limit handling:** The AI module retries up to 3 times with exponential backoff (2s, 4s, 8s) on 429 errors.
+
+**Prompts** are defined in `utils/prompts.py` — edit them to change AI behavior.
+
+---
+
+## Setup & Installation
+
+### Prerequisites
+
+- Python 3.10+
+- A Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
+- A Groq API Key (free at [console.groq.com](https://console.groq.com))
+- A Gmail account with App Password for email escalation
+
+### Steps
+
+```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd cpbfi-bot
+
+# 2. Create virtual environment (recommended)
+python -m venv venv
+venv\Scripts\activate   # Windows
+# source venv/bin/activate  # Linux/Mac
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Create .env file
+copy .env.example .env   # Windows
+# cp .env.example .env   # Linux/Mac
+
+# 5. Edit .env with your credentials
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `BOT_TOKEN` | ✅ Yes | Telegram bot token from @BotFather |
+| `GROQ_API_KEY` | ✅ Yes | API key for Groq AI (free tier) |
+| `SENDER_EMAIL` | ✅ Yes | Gmail address for sending escalation emails |
+| `SENDER_PASSWORD` | ✅ Yes | Gmail App Password (NOT your regular password) |
+| `RECEIVER_EMAIL` | ✅ Yes | IT support email that receives escalation emails |
+
+### Getting a Gmail App Password
+
+1. Go to [Google Account Security](https://myaccount.google.com/security)
+2. Enable **2-Step Verification** if not already enabled
+3. Go to **App passwords** → Select "Mail" → Generate
+4. Use the 16-character password as `SENDER_PASSWORD`
+
+---
+
+## Running the Bot
+
+```bash
+python main.py
+```
+
+Expected output:
+```
+2026-02-11 12:00:00,000 [INFO] __main__: 🤖 Bot is running...
+2026-02-11 12:00:00,001 [INFO] __main__: 📁 Using modular handler structure
+```
+
+> **⚠️ Only one instance can run at a time.** If you see a `409 Conflict` error, another instance is already running. Stop it first.
+
+---
+
+## Deployment Guide
+
+### Option 1: VPS / Cloud Server (Recommended)
+
+```bash
+# On your server (Ubuntu example):
+sudo apt update && sudo apt install python3 python3-pip python3-venv
+
+git clone <repo-url>
+cd cpbfi-bot
+
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Create .env file with your credentials
+nano .env
+
+# Run with systemd (see below) or screen/tmux
+python main.py
+```
+
+#### Systemd Service (for auto-restart)
+
+Create `/etc/systemd/system/cpbfi-bot.service`:
+
+```ini
+[Unit]
+Description=CPBFI Helpdesk Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cpbfi-bot
+Environment=PATH=/home/ubuntu/cpbfi-bot/venv/bin
+ExecStart=/home/ubuntu/cpbfi-bot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable cpbfi-bot
+sudo systemctl start cpbfi-bot
+
+# Check status
+sudo systemctl status cpbfi-bot
+
+# View logs
+journalctl -u cpbfi-bot -f
+```
+
+### Option 2: PythonAnywhere (Free Tier)
+
+1. Upload files to PythonAnywhere
+2. Set up a scheduled task or always-on task (paid feature)
+3. Install dependencies: `pip install -r requirements.txt`
+4. Create `.env` file with credentials
+5. Run `python main.py`
+
+> **Note:** Free-tier PythonAnywhere may not support long-running processes.
+
+---
+
+## Production Considerations
+
+### ⚠️ Critical Things to Know
+
+| Concern | Current State | What to Do |
+|---------|--------------|------------|
+| **State persistence** | In-memory (lost on restart) | For production scale, migrate to Redis or SQLite |
+| **Single instance only** | `infinity_polling()` conflicts with multiple instances | Run exactly ONE instance at a time |
+| **Groq free tier limits** | 30 req/min, 14,400 req/day | Monitor usage; upgrade if traffic increases |
+| **Gmail sending limits** | ~500 emails/day | Sufficient for support bot; use SendGrid/Mailgun for higher volume |
+| **No authentication** | Any Telegram user can use the bot | Consider restricting to specific groups or user IDs if needed |
+| **Logging** | Console-only via Python `logging` | For production, add file handler or ship to a log aggregator |
+| **Error recovery** | `infinity_polling()` auto-reconnects | Use systemd `Restart=always` as an additional safety net |
+
+### Security Checklist
+
+- [ ] `.env` is in `.gitignore` (already configured ✅)
+- [ ] Use Gmail **App Password**, not real password
+- [ ] Never commit `BOT_TOKEN` or `GROQ_API_KEY` to git
+- [ ] Review `RECEIVER_EMAIL` — ensure it goes to the correct IT team inbox
+- [ ] Consider restricting bot to specific Telegram groups/users if needed
+
+### Monitoring
+
+Currently there is no external monitoring. For production, consider:
+
+1. **Uptime monitoring** — Use [UptimeRobot](https://uptimerobot.com) or similar to ping the server
+2. **Error alerts** — Integrate Python logging with email/Slack alerts for ERROR-level logs
+3. **Usage metrics** — Track escalation email count, AI API usage, active users
+
+---
+
+## File-by-File Reference
+
+### Entry Point
+
+| File | Purpose |
+|------|---------|
+| `main.py` | Loads env vars, validates them, configures logging, initializes bot, registers all handlers in order, starts polling |
+
+### Handlers
+
+| File | Trigger | Purpose |
+|------|---------|---------|
+| `menu.py` | Called by other handlers | Renders the main support menu with 6 category buttons |
+| `login.py` | `callback_data` starting with `"login"` | Full login troubleshooting flow for Skillserv and Knowlens portals |
+| `assessment.py` | `callback_data` starting with `"assessment"`, `"pcq"`, or `"post"` | PCQ and Post Assessment troubleshooting |
+| `lms.py` | `callback_data` starting with `"lms"` | LMS / Videos troubleshooting |
+| `navigation.py` | `callback_data` starting with `"navhelp"` or `"nav_"` | Step-by-step platform usage guide |
+| `other.py` | `callback_data` `"other"`, `"other_resolved"`, `"other_back_menu"` | Free-form issue → AI analysis → nav buttons |
+| `ai_chat.py` | `callback_data` `"ai_chat"` or `"exit_ai_chat"` | Persistent AI chat mode (CPBFI-only) |
+| `help.py` | Text message `"help"` (groups & DMs) | DMs user from group with support menu |
+| `photo.py` | Photo messages in private chat | Analyzes caption keywords, provides tips |
+| `general.py` | All other private text messages | Routes to active handler or falls back to AI |
+
+### Utilities
+
+| File | Purpose |
+|------|---------|
+| `ai.py` | Groq API wrapper with retry logic and rate limit handling |
+| `email.py` | SMTP email sender (Gmail) — returns `True`/`False` for success/failure |
+| `prompts.py` | AI system prompts defining bot personality and scope |
+| `validators.py` | Email format validation using regex |
+
+---
+
+## Handler Registration Order
+
+The order in `main.py` matters — **more specific handlers must be registered first**:
 
 ```python
-# Handler registration order (important!)
-1. login.register(bot)      # Login callbacks
-2. assessment.register(bot) # Assessment callbacks
-3. lms.register(bot)        # LMS callbacks
-4. navigation.register(bot) # Navigation callbacks
-5. other.register(bot)      # Other issue callbacks
-6. ai_chat.register(bot)    # AI chat callbacks
-7. photo.register(bot)      # Photo messages
-8. help.register(bot)       # /help command
-9. general.register(bot)    # Catch-all (MUST BE LAST!)
+# 1. Callback handlers (button clicks) — order doesn't matter much
+login.register(bot)
+assessment.register(bot)
+lms.register(bot)
+navigation.register(bot)
+other.register(bot)
+ai_chat.register(bot)
+
+# 2. Message handlers — ORDER MATTERS
+photo.register(bot)     # Photo messages first
+help.register(bot)      # "help" keyword handler
+general.register(bot)   # Catch-all MUST be LAST
+```
+
+> **⚠️ `general.py` must always be registered last.** It's a catch-all that handles any private text message. If registered before other text handlers, it will intercept their messages.
+
+---
+
+## Message Routing in `general.py`
+
+When a private text message arrives, `general.py` checks states in this order:
+
+```
+1. Is it a greeting? (hi/hello/start/menu) → Show main menu
+2. Is user in login detail collection?      → Route to login handler
+3. Is user in assessment detail collection? → Route to assessment handler
+4. Is user in LMS detail collection?        → Route to LMS handler
+5. Is user in login "other" mode?           → Route to login AI
+6. Is user in assessment "other" mode?      → Route to assessment AI
+7. Is user in LMS "other" mode?             → Route to LMS AI
+8. Is user in "other issue" AI mode?        → Route to other handler
+9. Is user in AI chat mode?                 → Route to AI chat
+10. Fallback                                → AI responds + show menu
 ```
 
 ---
 
-### 2. `handlers/menu.py` - Main Menu
+## Troubleshooting
 
-**Purpose:** Displays the main support category menu.
-
-**Function:**
-```python
-send_support_menu(bot, chat_id)
-```
-
-**Menu Buttons:**
-| Button | Callback Data |
-|--------|---------------|
-| 🔐 Login | `login` |
-| 📚 Assessment | `assessment` |
-| 📖 LMS | `lms` |
-| 🧭 Navigation Help | `navhelp` |
-| ❓ Other Issue | `other` |
-| 💬 Chat with Us | `ai_chat` |
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| `409 Conflict` error | Another bot instance is running | Stop the other instance first |
+| `BOT_TOKEN is not set` | Missing `.env` file or variable | Create `.env` from `.env.example` |
+| Emails not sending | Wrong `SENDER_PASSWORD` or Gmail security | Use App Password, enable 2FA |
+| AI returns "unavailable" | Groq rate limit or API key issue | Check `GROQ_API_KEY`, wait if rate limited |
+| Bot not responding in groups | Bot privacy mode is ON | Talk to @BotFather → `/setprivacy` → Disable |
+| Buttons show loading spinner | Missing `answer_callback_query` | Already fixed — ensure latest code is deployed |
 
 ---
 
-### 3. `handlers/login.py` - Login Issues
+## Dependencies
 
-**Purpose:** Handles all login-related problems for Skillserv and Knowlens portals.
-
-**Callback Prefixes:** `login*`
-
-**Flow:**
-```
-login → Portal Selection → Issue Type → Solution → Fixed/Try Again/Escalate
-```
-
-**Key States:**
-| State Variable | Purpose |
-|----------------|---------|
-| `user_login_other_mode` | Tracks users in "Other Login Issue" mode |
-| `user_detail_collection` | Collects escalation details (name, email, BFSI ID) |
-| `user_escalation_attempts` | Tracks retry attempts before escalation |
-
-**Issue Types:**
-- Invalid Credentials
-- OTP Not Received
-- Forgot Password
-- Other Login Issue (AI-powered)
-
-**Escalation Logic:**
-- Attempt 1: Provide alternative solution
-- Attempt 2+: Collect details → Send email to IT
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `pyTelegramBotAPI` | 4.14.0 | Telegram Bot API wrapper (telebot) |
+| `groq` | 0.9.0 | Groq AI API client |
+| `httpx` | 0.27.0 | HTTP client (dependency of groq) |
+| `python-dotenv` | 1.0.1 | Load `.env` file into environment |
 
 ---
 
-### 4. `handlers/assessment.py` - Assessments
+## Future Improvements
 
-**Purpose:** Handles PCQ (Pre-Course Quiz) and Post Assessment issues.
+If continuing development, consider:
 
-**Callback Prefixes:** `assessment*`, `pcq*`, `post*`
-
-**Flow:**
-```
-assessment → PCQ/Post → Issue Type → Solution/Time Calculator → Fixed/Escalate
-```
-
-**Special Features:**
-
-**⏱️ PCQ Time Calculator:**
-```python
-# Checks if user is within 30-minute window
-if time_difference <= 30:
-    "You can still join!"
-else:
-    "Time has exceeded, contact IT"
-```
-
-**Issue Types (PCQ):**
-- Where to find Quiz
-- Test Not Showing
-- Unable to Submit
-- Exited Midway
-- Time/Late Joining Issue
-- Other PCQ Issue
-
-**Issue Types (Post Assessment):**
-- Assessment Not Visible
-- Loading Issues
-- Submission Failed
-- Exited Midway
-- Other Post Issue
+1. **Database** — Replace in-memory dicts with SQLite/PostgreSQL for state persistence across restarts
+2. **Webhook mode** — Switch from polling to webhook for better performance on production servers
+3. **Admin panel** — Add `/admin` commands for viewing escalation stats, user counts
+4. **Multi-language** — Add Hindi/regional language support for CPBFI's diverse user base
+5. **Rate limiting** — Add per-user rate limiting to prevent abuse
+6. **Metrics dashboard** — Track resolution rates, escalation frequency, AI usage
 
 ---
 
-### 5. `handlers/lms.py` - LMS Issues
-
-**Purpose:** Handles Learning Management System related problems.
-
-**Callback Prefixes:** `lms*`
-
-**Flow:**
-```
-lms → Issue Type → Solution → Fixed/Escalate
-```
-
-**Issue Types:**
-- Videos Not Visible
-- Videos Not Playing
-- Progress Not Updated
-- Course Expired
-- Other LMS Issue (AI-powered)
-
----
-
-### 6. `handlers/navigation.py` - Platform Guides
-
-**Purpose:** Provides step-by-step instructional guides for students.
-
-**Callback Prefixes:** `navhelp*`, `nav_*`
-
-**Flow:**
-```
-navhelp → Student Guide → Select Topic → View Instructions → Back
-```
-
-**7 Student Guides:**
-
-| Guide | Steps |
-|-------|-------|
-| 🔐 How to Login | Portal → ID/Password → Login → Dashboard |
-| 🧠 How to Attempt PCQ | Dashboard → Session → PCQ → Begin → Submit |
-| 📊 How to Attempt Post Assessment | Dashboard → Session → Post → Begin → Submit |
-| 📝 How to Submit Feedback | Dashboard → Session → Feedback → Submit |
-| 👤 How to Complete Profile | Login → Basic → Advanced → Resume → Save |
-| 🎓 How to Download HR Certificate | Dashboard → Certificates → HR → Download |
-| 🏆 How to Download Completion Certificate | Dashboard → Certificates → Completion → Download |
-
----
-
-### 7. `handlers/ai_chat.py` - AI Chat Mode
-
-**Purpose:** Provides continuous AI-powered chat for CPBFI-related questions.
-
-**Callback Data:** `ai_chat`, `exit_ai_chat`
-
-**Key Features:**
-- Restricted to CPBFI platform questions only
-- Declines general knowledge, coding, weather, etc.
-- Uses `human_mode=True` for friendly responses
-
-**State Variable:**
-```python
-user_ai_chat_mode = {}  # {chat_id: True/False}
-```
-
-**Functions:**
-```python
-is_in_chat_mode(chat_id)      # Check if user is in AI chat
-handle_chat_message(bot, msg) # Process AI chat messages
-```
-
----
-
-### 8. `handlers/other.py` - Other Issues
-
-**Purpose:** One-shot AI response for miscellaneous platform issues.
-
-**Callback Data:** `other`
-
-**Flow:**
-```
-other → User describes issue → AI responds (once) → Exit mode
-```
-
-**State Variable:**
-```python
-user_other_mode = {}  # {chat_id: True/False}
-```
-
----
-
-### 9. `handlers/photo.py` - Screenshot Handler
-
-**Purpose:** Processes screenshot captions for context-aware troubleshooting.
-
-**Caption Keywords:**
-| Keyword | Response Type |
-|---------|---------------|
-| `pcq` | PCQ troubleshooting tips |
-| `login` | Login troubleshooting tips |
-| (other) | General acknowledgment |
-
----
-
-### 10. `handlers/help.py` - Help Command
-
-**Purpose:** Handles `/help` command for both private chats and groups.
-
-**Behavior:**
-
-| Context | Action |
-|---------|--------|
-| Private Chat | Show main menu directly |
-| Group Chat | DM user with menu + Reply in group with "Go to Chat" button |
-
----
-
-### 11. `handlers/general.py` - Message Router
-
-**Purpose:** Central message router that handles all private messages.
-
-**⚠️ MUST BE REGISTERED LAST!**
-
-**Greeting Keywords (Reset all states):**
-```python
-GREETING_KEYWORDS = ["hi", "hello", "hey", "start", "menu", "help", "home"]
-```
-
-**Routing Logic:**
-```python
-1. Check if greeting → Clear states → Show menu
-2. Check if in AI chat mode → Route to ai_chat handler
-3. Check if in other_issue mode → Route to other handler
-4. Check if collecting login details → Route to login handler
-5. Check if collecting assessment details → Route to assessment handler
-6. Check if in login_other_mode → Route to login AI handler
-7. Default: Prompt user to use menu
-```
-
----
-
-## 🔧 Utilities Documentation
-
-### 1. `utils/ai.py` - AI Integration
-
-**Purpose:** Integrates with Groq API for AI responses.
-
-**Function:**
-```python
-def ask_ai_free(prompt, human_mode=False):
-    """
-    Get AI response from Groq.
-    
-    Args:
-        prompt: User's question
-        human_mode: True for friendly chat, False for formal support
-    
-    Returns:
-        AI response string
-    """
-```
-
-**Model:** `llama-3.1-8b-instant`
-
----
-
-### 2. `utils/email.py` - Email Notifications
-
-**Purpose:** Sends escalation emails to IT support team.
-
-**Function:**
-```python
-def send_email_to_it(user_data, issue):
-    """
-    Send escalation email to IT team.
-    
-    Args:
-        user_data: Dict with name, email, bfsi_id
-        issue: Description of the issue
-    """
-```
-
-**SMTP Configuration:** Gmail with App Password
-
----
-
-### 3. `utils/prompts.py` - AI Prompts
-
-**Purpose:** Defines system prompts for AI behavior.
-
-**Prompts:**
-
-| Prompt | Usage |
-|--------|-------|
-| `SYSTEM_PROMPT` | Formal IT support responses |
-| `HUMAN_CHAT_PROMPT` | Friendly chat (CPBFI-only, restricted) |
-
-**HUMAN_CHAT_PROMPT Restrictions:**
-- ✅ Login, Assessment, LMS, Navigation, Profile, Certificates, Feedback
-- ❌ General knowledge, coding, weather, jokes, etc.
-
----
-
-## 🔄 Bot Flows
-
-### Main Flow
-```
-User Message → general.py routes → Specific Handler → Solution/Escalation → Menu
-```
-
-### Escalation Flow
-```
-Issue → Solution → "Still Not Working?" → Attempt 1 (Try Again) → Attempt 2+ → 
-Collect Details (Name → Email → BFSI ID) → Send Email → Confirm → Menu
-```
-
-### AI Chat Flow
-```
-"Chat with Us" → Enter AI Mode → User asks question → AI responds → 
-Loop until "Exit AI Chat" → Return to Menu
-```
-
----
-
-## 📡 API Reference
-
-### Telegram Bot API
-
-| Method | Usage |
-|--------|-------|
-| `bot.send_message()` | Send text messages |
-| `bot.send_chat_action()` | Show "typing..." |
-| `bot.callback_query_handler()` | Handle button clicks |
-| `bot.message_handler()` | Handle text messages |
-
-### Groq API
-
-| Endpoint | Model |
-|----------|-------|
-| `chat.completions.create()` | `llama-3.1-8b-instant` |
-
-### Gmail SMTP
-
-| Parameter | Value |
-|-----------|-------|
-| Host | `smtp.gmail.com` |
-| Port | `587` |
-| Auth | App Password |
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit changes: `git commit -m "Add new feature"`
-4. Push to branch: `git push origin feature/new-feature`
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is proprietary software for CPBFI internal use.
-
----
-
-## 👨‍💻 Author
-
-**CPBFI IT Team**
-
-- GitHub: [@alokbhorunde](https://github.com/alokbhorunde)
-- Repository: [CPBFI Bot](https://github.com/alokbhorunde/CPBFI)
-
----
-
-*Last Updated: February 2026*
+*Last updated: February 2026*
+*Developed for CPBFI IT Support Team*
