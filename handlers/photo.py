@@ -1,16 +1,15 @@
 def register(bot):
     """Register photo message handler."""
-    
+
     @bot.message_handler(content_types=['photo'], func=lambda m: m.chat.type == "private")
     def photo_handler(message):
         cid = message.chat.id
         caption = message.caption if message.caption else ""
-        
+
         bot.send_chat_action(cid, "typing")
-        
-        # Acknowledge the screenshot and provide help
-        response = "📸 Thanks for sharing the screenshot! I can see you're facing an issue.\n\n"
-        
+
+        response = "Thanks for sharing the screenshot! I can see you're facing an issue.\n\n"
+
         if "pcq" in caption.lower() or "quiz" in caption.lower():
             response += ("This looks like a PCQ/Quiz access issue. The error usually means:\n"
                         "• You're outside the allowed time window\n"
@@ -23,6 +22,6 @@ def register(bot):
                         "• Reset password if needed\n\n"
                         "Still stuck? Let me know more details!")
         else:
-            response += "Please describe what issue you're facing in this screenshot, and I'll help you fix it! 😊"
-        
+            response += "Please describe what issue you're facing in this screenshot, and I'll help you fix it!"
+
         bot.send_message(cid, response)
