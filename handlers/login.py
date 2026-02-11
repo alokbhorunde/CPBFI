@@ -82,65 +82,27 @@ def register(bot):
                 reply_markup=markup
             )
 
-        elif data.startswith("login_otp_") and not data.startswith("login_otp_still_") and not data.startswith("login_otp_resend_") and not data.startswith("login_otp_confirm_") and not data.startswith("login_otp_device_"):
+        elif data.startswith("login_otp_"):
             portal = data.split("_")[-1].capitalize()
             track_issue(cid, portal, "OTP Not Received")
 
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
-                types.InlineKeyboardButton("Resend OTP (After Waiting)", callback_data=f"login_otp_resend_{portal.lower()}"),
-                types.InlineKeyboardButton("Try Another Device / Browser", callback_data=f"login_otp_device_{portal.lower()}"),
                 types.InlineKeyboardButton("Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}")
+                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_portal_{portal.lower()}"),
+                types.InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="login_back_menu")
             )
 
             bot.send_message(cid,
                 "**OTP Not Received**\n\n"
-                "If you are not receiving the OTP, please check the following:\n\n"
+                "Please try the following steps:\n\n"
                 "1. Check your **Spam / Junk** folder.\n"
-                "2. Wait for **2–3 minutes** before requesting again.\n"
-                "3. Do **NOT** request OTP multiple times in a short duration.\n\n"
+                "2. Wait **2–3 minutes**, then refresh the login page and request a new OTP.\n"
+                "3. Do **NOT** request OTP multiple times in a short duration.\n"
+                "4. Try a different browser (Chrome, Edge, Firefox).\n"
+                "5. Try a different device (phone, tablet, laptop).\n"
+                "6. Ensure you're on a stable internet connection.\n\n"
                 "_Requesting too many OTPs may temporarily block delivery._",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data.startswith("login_otp_resend_"):
-            portal = data.split("_")[-1].capitalize()
-
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Done, Trying Again", callback_data=f"login_portal_{portal.lower()}"),
-                types.InlineKeyboardButton("Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_otp_{portal.lower()}")
-            )
-
-            bot.send_message(cid,
-                "**Resend OTP**\n\n"
-                "Please wait at least 2-3 minutes, then:\n"
-                "1. Refresh the login page\n"
-                "2. Request a new OTP\n"
-                "3. Check both Inbox and Spam folder",
-                parse_mode="Markdown",
-                reply_markup=markup
-            )
-
-        elif data.startswith("login_otp_device_"):
-            portal = data.split("_")[-1].capitalize()
-
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                types.InlineKeyboardButton("✅ Worked!", callback_data="login_fixed"),
-                types.InlineKeyboardButton("Still Not Received", callback_data=f"login_still_not_working_{portal.lower()}"),
-                types.InlineKeyboardButton("⬅️ Back", callback_data=f"login_otp_{portal.lower()}")
-            )
-
-            bot.send_message(cid,
-                "**Try Another Device / Browser**\n\n"
-                "Please try:\n"
-                "• A different browser (Chrome, Edge, Firefox)\n"
-                "• A different device (phone, tablet, laptop)\n"
-                "• Ensure you're on a stable internet connection",
                 parse_mode="Markdown",
                 reply_markup=markup
             )
