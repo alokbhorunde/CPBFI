@@ -1,7 +1,11 @@
+import logging
 from telebot import types
 from handlers.menu import send_support_menu
 from utils.ai import ask_ai_free
 from utils.email import send_email_to_it
+from utils.validators import is_valid_email
+
+logger = logging.getLogger(__name__)
 
 user_login_other_mode = {}
 user_escalation_attempts = {}
@@ -13,10 +17,15 @@ def register(bot):
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith("login"))
     def handle_login(call):
+        bot.answer_callback_query(call.id)
         cid = call.message.chat.id
         data = call.data
 
         if data == "login":
+            # Clear any in-progress detail collection when returning to menu
+            if cid in user_detail_collection:
+                del user_detail_collection[cid]
+
             user_escalation_attempts[cid] = user_escalation_attempts.get(cid, {"count": 0, "portal": "", "issue": ""})
 
             markup = types.InlineKeyboardMarkup(row_width=1)
@@ -260,6 +269,18 @@ def handle_detail_collection(bot, message):
         )
 
     elif current_step == "email":
+        if not is_valid_email(user_input):
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="login"))
+
+            bot.send_message(cid,
+                "⚠️ That doesn't look like a valid email address.\n\n"
+                "Please enter a valid **Email ID** (e.g. name@example.com):",
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+            return True
+
         user_detail_collection[cid]["email"] = user_input
         user_detail_collection[cid]["step"] = "bfsi"
 
@@ -279,7 +300,7 @@ def handle_detail_collection(bot, message):
 
         details = user_detail_collection[cid]
 
-        send_login_escalation_email(
+        email_sent = send_login_escalation_email(
             name=details["name"],
             email=details["email"],
             bfsi_id=details["bfsi"],
@@ -287,19 +308,33 @@ def handle_detail_collection(bot, message):
             issue=details["issue"]
         )
 
-        bot.send_message(cid,
-            "**Issue Escalated Successfully!**\n\n"
-            f"**Details Submitted:**\n"
-            f"• Name: {details['name']}\n"
-            f"• Email: {details['email']}\n"
-            f"• BFSI ID: {details['bfsi']}\n"
-            f"• Portal: {details['portal']}\n"
-            f"• Issue: {details['issue']}\n\n"
-            "Our support team will contact you shortly.\n"
-            "For urgent queries: support@cpbfi.org\n\n"
-            "Thank you for your patience!",
-            parse_mode="Markdown"
-        )
+        if email_sent:
+            bot.send_message(cid,
+                "**Issue Escalated Successfully!**\n\n"
+                f"**Details Submitted:**\n"
+                f"• Name: {details['name']}\n"
+                f"• Email: {details['email']}\n"
+                f"• BFSI ID: {details['bfsi']}\n"
+                f"• Portal: {details['portal']}\n"
+                f"• Issue: {details['issue']}\n\n"
+                "Our support team will contact you shortly.\n"
+                "For urgent queries: support@cpbfi.org\n\n"
+                "Thank you for your patience!",
+                parse_mode="Markdown"
+            )
+        else:
+            bot.send_message(cid,
+                "**Issue Recorded — Email Could Not Be Sent**\n\n"
+                f"**Your Details:**\n"
+                f"• Name: {details['name']}\n"
+                f"• Email: {details['email']}\n"
+                f"• BFSI ID: {details['bfsi']}\n"
+                f"• Portal: {details['portal']}\n"
+                f"• Issue: {details['issue']}\n\n"
+                "⚠️ We couldn't send the escalation email automatically.\n"
+                "Please contact support directly: **support@cpbfi.org**",
+                parse_mode="Markdown"
+            )
 
         if cid in user_escalation_attempts:
             user_escalation_attempts[cid] = {"count": 0, "portal": "", "issue": ""}
@@ -311,11 +346,8 @@ def handle_detail_collection(bot, message):
 
 
 def send_login_escalation_email(name, email, bfsi_id, portal, issue):
-    try:
-        send_email_to_it(f"{name} ({email})", f"LOGIN - {issue} - {portal}")
-        print(f"Login escalation email sent for {name} ({email})")
-    except Exception as e:
-        print(f"Email error: {e}")
+    """Returns True if email sent, False if failed."""
+    return send_email_to_it(f"{name} ({email})", f"LOGIN - {issue} - {portal}")
 
 
 def is_in_login_other_mode(chat_id):
@@ -332,11 +364,14 @@ def handle_login_other_message(bot, message):
     prompt = f"User is facing a login issue on {portal} portal. Their issue: {user_query}"
     ai_response = ask_ai_free(prompt)
 
-    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         types.InlineKeyboardButton("✅ Issue Resolved", callback_data="login_fixed"),
-        types.InlineKeyboardButton("Still Need Help", callback_data=f"login_still_not_working_{portal.lower()}"),
-        types.InlineKeyboardButton("⬅️ Back to Login Menu", callback_data="login")
+        types.InlineKeyboardButton("Still Need Help", callback_data=f"login_still_not_working_{portal.lower()}")
+    )
+    markup.add(
+        types.InlineKeyboardButton("⬅️ Back", callback_data="login"),
+        types.InlineKeyboardButton("⬅️ Main Menu", callback_data="login_back_menu")
     )
 
     bot.send_message(cid, ai_response, reply_markup=markup, parse_mode="Markdown")

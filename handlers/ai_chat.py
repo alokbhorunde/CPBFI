@@ -10,6 +10,7 @@ def register(bot):
 
     @bot.callback_query_handler(func=lambda call: call.data in ["ai_chat", "exit_ai_chat"])
     def handle_ai_chat(call):
+        bot.answer_callback_query(call.id)
         cid = call.message.chat.id
         data = call.data
 
@@ -51,4 +52,7 @@ def handle_chat_message(bot, message):
     bot.send_chat_action(cid, "typing")
     ai_response = ask_ai_free(user_msg, human_mode=True)
 
-    bot.send_message(cid, ai_response)
+    exit_btn = types.InlineKeyboardMarkup()
+    exit_btn.add(types.InlineKeyboardButton("❌ Exit AI Chat", callback_data="exit_ai_chat"))
+
+    bot.send_message(cid, ai_response, reply_markup=exit_btn, parse_mode="Markdown")

@@ -7,6 +7,7 @@ def register(bot):
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith("navhelp") or call.data.startswith("nav_"))
     def handle_navhelp(call):
+        bot.answer_callback_query(call.id)
         cid = call.message.chat.id
         data = call.data
 

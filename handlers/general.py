@@ -46,9 +46,13 @@ def register(bot):
     @bot.message_handler(func=lambda msg: msg.chat.type == "private")
     def general_message_handler(message):
         cid = message.chat.id
-        user_msg = message.text.lower() if message.text else ""
 
-        if message.text and is_greeting(message.text):
+        # FIX #5: Guard against non-text messages (stickers, voice, etc.)
+        if not message.text:
+            bot.send_message(cid, "I can only process text messages. Please type your question or say 'hi' to start.")
+            return
+
+        if is_greeting(message.text):
             clear_all_user_states(cid)
             bot.send_message(cid, "Welcome to CPBFI Helpdesk!\n\nHow can I assist you today?")
             send_support_menu(bot, cid)
@@ -90,3 +94,4 @@ def register(bot):
 
         ai_response = ask_ai_free(message.text)
         bot.send_message(cid, ai_response)
+        send_support_menu(bot, cid)

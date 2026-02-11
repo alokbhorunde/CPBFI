@@ -1,5 +1,8 @@
+import logging
 from telebot import types
 from handlers.menu import send_support_menu
+
+logger = logging.getLogger(__name__)
 
 
 def register(bot):
@@ -37,7 +40,8 @@ def register(bot):
                 ))
                 bot.reply_to(message, "I have messaged you, you can tell me your issue there",
                            reply_markup=dm_markup)
-            except:
+            except Exception as e:
+                logger.warning(f"Could not DM user {user_id}: {e}")
                 bot.reply_to(message, "Please click 'Start' on my profile so I can DM you.")
         else:
             send_support_menu(bot, chat_id)
