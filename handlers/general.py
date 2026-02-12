@@ -1,6 +1,8 @@
 from handlers import assessment, lms, other, ai_chat, login
 from handlers.menu import send_support_menu
 from utils.ai import ask_ai_free
+from utils.rate_limiter import rate_limiter
+from utils.analytics import analytics
 
 GREETING_KEYWORDS = ["hi", "hello", "hey", "start", "menu", "help", "main menu", "home"]
 
@@ -53,13 +55,11 @@ def register(bot):
             return
 
         # Rate limiting
-        from utils.rate_limiter import rate_limiter
         if not rate_limiter.is_allowed(cid):
             bot.send_message(cid, "⚠️ You're sending messages too quickly. Please wait a moment.")
             return
 
         # Analytics
-        from utils.analytics import analytics
         analytics.track_message(cid)
 
         if is_greeting(message.text):

@@ -29,22 +29,21 @@ class Analytics:
         self.ai_queries += 1
 
     def get_summary(self):
-        return (
+        header = (
             f"📊 **Bot Analytics**\n\n"
             f"• Total messages: {self.total_messages}\n"
             f"• Unique users: {len(self.unique_users)}\n"
             f"• AI queries: {self.ai_queries}\n"
-            f"• Escalations: {self.escalations}\n\n"
-            f"**Category Clicks:**\n"
-            + "\n".join(f"• {k}: {v}" for k, v in sorted(self.category_clicks.items(), key=lambda x: -x[1]))
-            if self.category_clicks else
-            f"📊 **Bot Analytics**\n\n"
-            f"• Total messages: {self.total_messages}\n"
-            f"• Unique users: {len(self.unique_users)}\n"
-            f"• AI queries: {self.ai_queries}\n"
-            f"• Escalations: {self.escalations}\n\n"
-            f"No category data yet."
+            f"• Escalations: {self.escalations}\n"
         )
+        if self.category_clicks:
+            lines = "\n".join(
+                f"• {k}: {v}"
+                for k, v in sorted(self.category_clicks.items(), key=lambda x: -x[1])
+            )
+            return header + f"\n**Category Clicks:**\n{lines}"
+        else:
+            return header + "\nNo category data yet."
 
 
 # Singleton

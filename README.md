@@ -241,7 +241,7 @@ The bot uses **Groq's free tier** with the `llama-3.1-8b-instant` model.
 
 ```bash
 # 1. Clone the repository
-git clone <repo-url>
+git clone https://github.com/alokbhorunde/CPBFI.git
 cd cpbfi-bot
 
 # 2. Create virtual environment (recommended)
@@ -304,7 +304,7 @@ Expected output:
 # On your server (Ubuntu example):
 sudo apt update && sudo apt install python3 python3-pip python3-venv
 
-git clone <repo-url>
+git clone https://github.com/alokbhorunde/CPBFI.git
 cd cpbfi-bot
 
 python3 -m venv venv
