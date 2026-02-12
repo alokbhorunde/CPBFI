@@ -52,8 +52,3 @@ def handle_ai_response(bot, message):
 
     bot.send_message(cid, ai_reply, reply_markup=markup, parse_mode="Markdown")
     user_ai_mode[cid] = False
-
-
-def handle_other_resolved(bot, cid):
-    bot.send_message(cid, "Great! Glad your issue was resolved.\n\nHappy learning!")
-    send_support_menu(bot, cid)

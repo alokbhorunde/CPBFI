@@ -8,13 +8,14 @@ def register(bot):
     def photo_handler(message):
         cid = message.chat.id
 
-        # FIX #12: Skip if user is in active detail collection
-        if login.is_in_detail_collection_mode(cid):
-            login.handle_detail_collection(bot, message)
-            return
-        if assessment.is_in_assessment_detail_collection_mode(cid):
-            return
-        if lms.is_in_lms_detail_collection_mode(cid):
+        # Guard: if user is in ANY detail collection, ask for text instead
+        if (login.is_in_detail_collection_mode(cid) or
+            assessment.is_in_assessment_detail_collection_mode(cid) or
+            lms.is_in_lms_detail_collection_mode(cid)):
+            bot.send_message(cid,
+                "⚠️ Please type your response as text.\n"
+                "Photos cannot be used during detail collection."
+            )
             return
 
         caption = message.caption if message.caption else ""

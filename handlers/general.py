@@ -52,6 +52,16 @@ def register(bot):
             bot.send_message(cid, "I can only process text messages. Please type your question or say 'hi' to start.")
             return
 
+        # Rate limiting
+        from utils.rate_limiter import rate_limiter
+        if not rate_limiter.is_allowed(cid):
+            bot.send_message(cid, "⚠️ You're sending messages too quickly. Please wait a moment.")
+            return
+
+        # Analytics
+        from utils.analytics import analytics
+        analytics.track_message(cid)
+
         if is_greeting(message.text):
             clear_all_user_states(cid)
             bot.send_message(cid, "Welcome to CPBFI Helpdesk!\n\nHow can I assist you today?")

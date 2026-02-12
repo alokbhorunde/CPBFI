@@ -1,3 +1,5 @@
+![CI](https://github.com/alokbhorunde/CPBFI/actions/workflows/lint.yml/badge.svg)
+
 # CPBFI Helpdesk Telegram Bot
 
 A modular IT helpdesk support bot for the **CPBFI (Centre for Promotion of Banking and Financial Inclusion)** platform. It assists students with login issues, assessment problems (PCQ & Post Assessment), LMS/video troubleshooting, platform navigation, and general AI-powered support chat — all via Telegram.

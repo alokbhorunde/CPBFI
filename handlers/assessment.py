@@ -206,7 +206,10 @@ def register(bot):
             )
 
         elif data in ("assessment_post", "post"):
-            user_assessment_escalation_attempts[cid] = {"count": 0, "issue": "", "type": "Post Assessment"}
+            if cid not in user_assessment_escalation_attempts:
+                user_assessment_escalation_attempts[cid] = {"count": 0, "issue": "", "type": "Post Assessment"}
+            else:
+                user_assessment_escalation_attempts[cid]["type"] = "Post Assessment"
 
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(

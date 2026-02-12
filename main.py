@@ -35,16 +35,11 @@ RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
 if not all([SENDER_EMAIL, SENDER_PASSWORD, RECEIVER_EMAIL]):
     logger.warning("Email env vars incomplete (SENDER_EMAIL, SENDER_PASSWORD, RECEIVER_EMAIL) — escalation emails will fail.")
 
-# ----------------------------------------------------------
-# BOT INITIALIZATION
-# ----------------------------------------------------------
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# ----------------------------------------------------------
-# REGISTER ALL HANDLERS
-# Order matters! More specific handlers should be registered first
-# ----------------------------------------------------------
-from handlers import login, assessment, lms, navigation, other, ai_chat, photo, help, general
+
+from handlers import login, assessment, lms, navigation, other, ai_chat, photo, help, general, admin
+from utils.health import start_health_server
 
 # Callback handlers (button clicks)
 login.register(bot)
@@ -55,14 +50,18 @@ other.register(bot)
 ai_chat.register(bot)
 
 # Message handlers
+admin.register(bot)     # Admin commands (/stats)
 photo.register(bot)     # Photo handler
 help.register(bot)      # Help command handler (groups + DMs)
 general.register(bot)   # Catch-all for private messages (must be last!)
 
-# ----------------------------------------------------------
-# RUN BOT
-# ----------------------------------------------------------
+
 if __name__ == "__main__":
     logger.info("🤖 Bot is running...")
     logger.info("📁 Using modular handler structure")
-    bot.infinity_polling()
+    start_health_server(port=8080)
+    try:
+        bot.infinity_polling()
+    except Exception as e:
+        logger.critical(f"Bot crashed: {e}", exc_info=True)
+        sys.exit(1)
